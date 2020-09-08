@@ -4,6 +4,7 @@ library(RCurl)
 # input parameters
 topics <- c("erlotinib")
 species <- "9606"
+outpath <- "C:\\Users\\Grace Wu\\text_features\\R\\genes\\"
 
 # initiate remote connection
 # note: RSelenium requires docker container having run the following commands
@@ -33,6 +34,6 @@ for (topic in topics) {
   
   # extract list of genes from txt output
   genes = fread(txt[[1]], sep = ' ', fill=TRUE)
-  ids <- dplyr::pull(genes, GeneID)
+  saveRDS(genes, paste(outpath, sprintf("%s.rds", topic)))
 }
 
