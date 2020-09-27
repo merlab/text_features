@@ -1,8 +1,10 @@
 library(RSelenium)
 library(RCurl)
+library("data.table")
 
 # input parameters
-topics <- c("erlotinib")
+topics <- c("NVP-ADW742", "NVP-TAE684", "TG-100-115")
+#topics <- gsub("-", "", topics)
 species <- "9606"
 outpath <- "C:\\Users\\Grace Wu\\text_features\\R\\genes\\"
 
@@ -17,6 +19,8 @@ Sys.sleep(5)
 
 #loop through topics of interest
 for (topic in topics) { 
+  print(topic)
+  skip_to_next <- FALSE
   remDr$navigate(url)
   webElem <- remDr$findElements("css", "iframe")
   remDr$switchToFrame(webElem[[1]])
@@ -28,12 +32,13 @@ for (topic in topics) {
   webElem$sendKeysToElement(list(species))
   webElem <-remDr$findElement('xpath', '//*[contains(@value,"Rank it!")]')
   webElem$clickElement()
-  webElem <-remDr$findElement('xpath', '//*[contains(@href,"_table.txt")]')
+  tryCatch(webElem <-remDr$findElement('xpath', '//*[contains(@href,"_table.txt")]'), error = function(e) { skip_to_next <<- TRUE})
+  if(skip_to_next) { next }   
   webElem$clickElement()
   txt<-remDr$findElement(using='css selector',"body")$getElementText()
   
   # extract list of genes from txt output
   genes = fread(txt[[1]], sep = ' ', fill=TRUE)
-  saveRDS(genes, paste(outpath, sprintf("%s.rds", topic)))
+  saveRDS(genes, paste(outpath, sprintf("%s.rds",topic)))
 }
 
