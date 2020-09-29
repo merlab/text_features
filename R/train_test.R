@@ -1,5 +1,5 @@
 library(caret)
-GDSC2 <- readRDS("C:/Users/Grace Wu/text_features/data/GDSC2.rds")
+GDSC2 <- readRDS("C:Users/Grace Wu/Documents/text_features/data/GDSC2.rds")
 molprof <- summarizeMolecularProfiles(GDSC2,
                                       mDataType="Kallisto_0.46.1.rnaseq.counts",
                                       fill.missing=TRUE,
@@ -28,9 +28,9 @@ gene_vars <- apply(GDSC2_data, 2, var)
 gene_names <- names(gene_vars[gene_vars > 0])
 GDSC2_data <- GDSC2_data[, gene_names]
 GDSC2_data <- as.matrix(GDSC2_data[, gene_names])
-x <- GDSC2_data
+x <- GDSC2_data[,1:100]
 y <- GDSC2_labels
-train_result <- train(x=x,
+train_result_sample <- train(x=x,
                       y=y,
                       method="glmnet",
                       preProcess=c("center", "scale"),
@@ -43,7 +43,6 @@ train_result <- train(x=x,
                                              repeats=5,
                                              search="grid",
                                              predictionBounds = c(0, 1),
-                                             allowParallel = FALSE,,
-                                             verboseIter=FALSE))
-GDSC2_pred_df <- data.frame(predict=predict(train_result, GDSC2_data),
-                            +                            original=GDSC2_labels)
+                                             allowParallel = FALSE,
+                                             verboseIter=TRUE))
+GDSC2_pred_df_allfeatures <- data.frame(predict=predict(train_result_allfeatures, GDSC2_data), original=GDSC2_labels)
