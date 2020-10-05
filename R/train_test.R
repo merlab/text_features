@@ -1,5 +1,5 @@
-library(caret);library(PharmacoGx)
-GDSC2 <- readRDS("../data/GDSC2.rds")
+library(caret)
+GDSC2 <- readRDS("C:Users/Grace Wu/Documents/text_features/data/GDSC2.rds")
 molprof <- summarizeMolecularProfiles(GDSC2,
                                       mDataType="Kallisto_0.46.1.rnaseq.counts",
                                       fill.missing=TRUE,
