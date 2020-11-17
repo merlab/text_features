@@ -10,7 +10,7 @@ dataset_preprocess <- function(pSet, mDataType, drug){
   
   #create df
   df = summarizeData(pSet=pSet, mDataType = mDataType, drug = drug, sensitivity.measure="aac_recomputed")
-  df = summarizeData(pSet=GDSC2, mDataType = "Kallisto_0.46.1.rnaseq", drug = "Erlotinib", sensitivity.measure="aac_recomputed")
+  #df = summarizeData(pSet=GDSC2, mDataType = "Kallisto_0.46.1.rnaseq", drug = "Erlotinib", sensitivity.measure="aac_recomputed")
   df = df[, !is.na(colData(df)$aac_recomputed)]
   
   #remove samples with NA value
@@ -61,7 +61,7 @@ trainmodel <- function(x,y,name){
                            classProbs = TRUE)
   
   pred_sample <- data.frame()
-  
+  result <- data.frame()
   for(res in names(trainIndex))
   {
     trIndx <- trainIndex[[res]]
@@ -78,18 +78,28 @@ trainmodel <- function(x,y,name){
                                 predict=predict(train_result_sample, x[tsIndx, ]),
                                 original=y[tsIndx], 
                                 resample=res)
+    acc <- sum(pred_sample_n$original == pred_sample_n$predict)/nrow(pred_sample_n)
+    result <- rbind(result, data.frame(ACC=acc, resample=res))
     pred_sample <- rbind(pred_sample, pred_sample_n)
   }
   
   saveRDS(train_result_sample, sprintf("model_%s.rds", name))
   saveRDS(pred_sample, sprintf("pred_result_%s.rds", name))
   metadata <- list(table(y), dim(x))
-  output <- list(train_result_sample, pred_sample, metadata)
+  output <- list(train_result_sample, pred_sample, metadata, result)
   return(output)
 }
 
 temp <- dataset_preprocess(GDSC2, "Kallisto_0.46.1.rnaseq", "Erlotinib")
 result <- trainmodel(output[1][[1]], output[2][[1]], "erlotinib")
 bwplot(result [[1]]$resample$Accuracy,  xlab="Accuracy", ylab = "Erlotinib", main = "Text Mining - Accuracy by Drug")
+
+
+
+
+####
+minedgenes <- readRDS("./ERLOTINIB.rds")
+dftext = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
+dfOther= df[!(rowData(df)$gene_name %in% minedgenes$Symbol), ]
 
 
