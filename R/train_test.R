@@ -74,7 +74,7 @@ trainmodel <- function(x,y,name){
                            classProbs = TRUE)
   
   pred_sample <- data.frame()
-  
+  result <- data.frame()
   for(res in names(trainIndex))
   {
     trIndx <- trainIndex[[res]]
@@ -91,13 +91,19 @@ trainmodel <- function(x,y,name){
                                 predict=predict(train_result_sample, x[tsIndx, ]),
                                 original=y[tsIndx], 
                                 resample=res)
+    acc <- sum(pred_sample_n$original == pred_sample_n$predict)/nrow(pred_sample_n)
+    result <- rbind(result, data.frame(ACC=acc, resample=res))
     pred_sample <- rbind(pred_sample, pred_sample_n)
   }
   
   #saveRDS(train_result_sample, sprintf("model_%s.rds", name))
   #saveRDS(pred_sample, sprintf("pred_result_%s.rds", name))
   metadata <- list(table(y), dim(x))
+<<<<<<< HEAD
   output <- list("pred_sample"=pred_sample, metadata)
+=======
+  output <- list(train_result_sample, pred_sample, metadata, result)
+>>>>>>> e0bb476d209a891252668071192b71de328ef09d
   return(output)
 }
 
@@ -138,4 +144,12 @@ data %>%
   ) +
   ggtitle("Training Results") +
   xlab("")
+
+
+
+####
+minedgenes <- readRDS("./ERLOTINIB.rds")
+dftext = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
+dfOther= df[!(rowData(df)$gene_name %in% minedgenes$Symbol), ]
+
 
