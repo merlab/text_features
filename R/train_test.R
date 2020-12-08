@@ -7,13 +7,14 @@ library(hrbrthemes)
 library(viridis)
 library(data.table)
 source("./summarizeData.R")
+source("./plot_data.R")
+source("./computeInteractionMatrix.R")
 GDSC2 <- readRDS("../data/GDSC2.rds")
-drugname <- "Erlotinib"
+drugname <- "Lapatinib"
 
 generate_df <- function(pSet, mDataType, drug){
   #create df
   df = summarizeData(pSet=pSet, mDataType = mDataType, drug = drug, sensitivity.measure="aac_recomputed")
-  #df = summarizeData(pSet=GDSC2, mDataType = "Kallisto_0.46.1.rnaseq", drug = "Erlotinib", sensitivity.measure="aac_recomputed")
   df = df[, !is.na(colData(df)$aac_recomputed)]
   
   #remove samples with NA value
@@ -42,19 +43,20 @@ subset_by_feat <- function(df, drug, textmining, subset_size = 500){
   #produce x and y, turn y to discrete
   x <- t(assay(dfout))
   y <- colData(dfout)$aac_recomputed
-  y <- ifelse(y >= 0.4,"sensitive","resistant")
+  cutoff <- callingWaterfall(y, "AUC")
+  y2 <- ifelse(y >= cutoff,"sensitive","resistant")
   
   #print class counts for y
-  counts <- table(y)
+  counts <- table(y2)
   print(sprintf("Resistant: %d", counts[1]))
   print(sprintf("Sensitive: %d", counts[2]))
   
-  output <- list("X"=x, "Y"=y)
+  output <- list("X"=x, "Y"=y2, "aac" = y)
   return(output)
 }
 
 #second function trains model based on x and y
-trainmodel <- function(x,y,name){
+trainmodel <- function(x,y,name,type){
   trainIndex <- createDataPartition(y, p = .8, 
                                     list = TRUE, 
                                     times = 10)
@@ -79,20 +81,40 @@ trainmodel <- function(x,y,name){
     trIndx <- trainIndex[[res]]
     tsIndx <- setdiff(1:nrow(x), trIndx)
     
-    train_result_sample <- train(x=x[trIndx, ], y=y[trIndx],
-                                 method="glmnet",
-                                 #preProcess=c("center", "scale"),
-                                 maximize = TRUE,
-                                 tuneGrid=tgrid,
-                                 trControl=tcontrol)
-    train_result_sample$trainingData <- NULL
-    pred_sample_n <- data.frame(index = tsIndx,
-                                predict=predict(train_result_sample, x[tsIndx, ]),
-                                original=y[tsIndx], 
-                                resample=res)
-    sprintf("Resistant: %d", counts[1])
-    per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict), reference = as.factor(pred_sample_n$original))
-    pred_sample <- rbind(pred_sample, pred_sample_n)
+    #trainTransformed <- x[trIndx, ]
+    #testTransformed <- x[tsIndx, ]
+    preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
+    trainTransformed <- predict(preProcValues, x[trIndx, ])
+    testTransformed <- predict(preProcValues, x[tsIndx, ])
+    
+    if (type == "class"){
+      train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                   method="glmnet",
+                                   maximize = TRUE,
+                                   tuneGrid=tgrid,
+                                   trControl=tcontrol)
+      train_result_sample$trainingData <- NULL
+      pred_sample_n <- data.frame(index = tsIndx,
+                                  predict=predict(train_result_sample, testTransformed),
+                                  original=y[tsIndx], 
+                                  resample=res)
+      per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict), reference = as.factor(pred_sample_n$original))
+      pred_sample <- rbind(pred_sample, pred_sample_n)
+    }
+    else if (type  == "regression"){
+      train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                   method="glmnet",
+                                   maximize = TRUE,
+                                   tuneGrid=tgrid,
+                                   trControl=tcontrol)
+      train_result_sample$trainingData <- NULL
+      pred_sample_n <- data.frame(index = tsIndx,
+                                  predict=predict(train_result_sample, testTransformed),
+                                  original=y[tsIndx], 
+                                  resample=res)
+      per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict), reference = as.factor(pred_sample_n$original))
+      pred_sample <- rbind(pred_sample, pred_sample_n)
+    }
   }
   
   #saveRDS(train_result_sample, sprintf("model_%s.rds", name))
@@ -106,39 +128,22 @@ df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", drugname)
 
 # for text mining genes
 temp1 <- subset_by_feat(df, drugname, TRUE)
-result1 <- trainmodel(temp1$X, temp1$Y, drugname)
+result1 <- trainmodel(temp1$X, temp1$Y, drugname, "class")
 bwdata1 <- sapply(result1$stats, function(temp) temp$overall["Accuracy"])
 
 # for top 500 genes
 temp2 <- subset_by_feat(df, drugname, FALSE, 500)
-result2 <- trainmodel(temp2$X, temp2$Y, drugname)
-bwdata1 <- sapply(result2$stats, function(temp) temp$overall["Accuracy"])
+result2 <- trainmodel(temp2$X, temp2$Y, drugname, "class")
+bwdata2 <- sapply(result2$stats, function(temp) temp$overall["Accuracy"])
 
 # for top 100 genes
 temp3 <- subset_by_feat(df, drugname, FALSE, 100)
-result3 <- trainmodel(temp3$X, temp3$Y, drugname)
+result3 <- trainmodel(temp3$X, temp3$Y, drugname, "class")
 bwdata3 <- sapply(result3$stats, function(temp) temp$overall["Accuracy"])
 
 # for top same number of genes
 temp4 <- subset_by_feat(df, drugname, FALSE, result1$metadata$features)
-result4 <- trainmodel(temp3$X, temp3$Y, drugname)
-bwdata4 <- sapply(result3$stats, function(temp) temp$overall["Accuracy"])
+result4 <- trainmodel(temp4$X, temp4$Y, drugname, "class")
+bwdata4 <- sapply(result4$stats, function(temp) temp$overall["Accuracy"])
 
-# generate bwplot
-data <- data.frame(
-  name=c( rep("text_mining",10), rep("500_genes",10), rep("100_genes",10), rep("not_text_mining",10)),
-  value=c( bwdata1, bwdata2, bwdata3, bwdata4)
-)
-
-data %>%
-  ggplot( aes(x=name, y=value, fill=name)) +
-  geom_boxplot() +
-  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
-  theme(text=element_text(size=16,  family="serif")) +
-  theme(
-    legend.position="none",
-    plot.title = element_text(size=11)
-  ) +
-  ggtitle("Training Results") +
-  xlab("")
-
+plotbw(drugname, bwdata1, bwdata2, bwdata3, bwdata4)
