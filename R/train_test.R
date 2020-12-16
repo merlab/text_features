@@ -30,7 +30,7 @@ generate_df <- function(pSet, mDataType, drug){
   return(df)
 }
 
-subset_by_feat <- function(df, drug, textmining, subset_size = 500){
+subset_by_feat <- function(df, drug, textmining, subset_size = 500, cutoff_method = "waterfall"){
   minedgenes <- readRDS(sprintf("./genes/%s.rds",toupper(drug)))
   #select mined genes
   if (textmining == TRUE){
@@ -43,7 +43,11 @@ subset_by_feat <- function(df, drug, textmining, subset_size = 500){
   #produce x and y, turn y to discrete
   x <- t(assay(dfout))
   y <- colData(dfout)$aac_recomputed
-  cutoff <- callingWaterfall(y, "AUC")
+  if (cutoff_method == "waterfall"){
+    cutoff <- callingWaterfall(y, "AUC")
+  } else {
+    cutoff <- 0.2
+  }
   y2 <- ifelse(y >= cutoff,"sensitive","resistant")
   
   #print class counts for y
@@ -80,9 +84,7 @@ trainmodel <- function(x,y,name,type){
   {
     trIndx <- trainIndex[[res]]
     tsIndx <- setdiff(1:nrow(x), trIndx)
-    
-    #trainTransformed <- x[trIndx, ]
-    #testTransformed <- x[tsIndx, ]
+
     preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
     trainTransformed <- predict(preProcValues, x[trIndx, ])
     testTransformed <- predict(preProcValues, x[tsIndx, ])
@@ -94,14 +96,16 @@ trainmodel <- function(x,y,name,type){
                                    tuneGrid=tgrid,
                                    trControl=tcontrol)
       train_result_sample$trainingData <- NULL
+      predictedRes  <- predict(train_result_sample, testTransformed, type = c("raw"))
+      predictedResProb  <- predict(train_result_sample, testTransformed, type = c("prob"))
       pred_sample_n <- data.frame(index = tsIndx,
-                                  predict=predict(train_result_sample, testTransformed),
+                                  predict.class=predictedRes,
+                                  predict.prob=predictedResProb,
                                   original=y[tsIndx], 
                                   resample=res)
-      per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict), reference = as.factor(pred_sample_n$original))
+      per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict.class), reference = as.factor(pred_sample_n$original))
       pred_sample <- rbind(pred_sample, pred_sample_n)
-    }
-    else if (type  == "regression"){
+    } else if (type  == "regression"){
       train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                    method="glmnet",
                                    maximize = TRUE,
@@ -117,33 +121,38 @@ trainmodel <- function(x,y,name,type){
     }
   }
   
-  #saveRDS(train_result_sample, sprintf("model_%s.rds", name))
-  #saveRDS(pred_sample, sprintf("pred_result_%s.rds", name))
+  saveRDS(train_result_sample, sprintf("model_%s.rds", name))
   metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
   output <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
   return(output)
 }
+
+ifelse(!dir.exists(file.path("../train_output/", sprintf("%s",drugname))), dir.create(file.path("../train_output/", sprintf("%s",drugname))), FALSE)
 
 df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", drugname)
 
 # for text mining genes
 temp1 <- subset_by_feat(df, drugname, TRUE)
 result1 <- trainmodel(temp1$X, temp1$Y, drugname, "class")
+saveRDS(result1, sprintf("../train_output/%s/model_%s_tm.rds", drugname,drugname))
 bwdata1 <- sapply(result1$stats, function(temp) temp$overall["Accuracy"])
 
 # for top 500 genes
 temp2 <- subset_by_feat(df, drugname, FALSE, 500)
 result2 <- trainmodel(temp2$X, temp2$Y, drugname, "class")
+saveRDS(result2, sprintf("../train_output/%s/model_%s_500.rds", drugname,drugname))
 bwdata2 <- sapply(result2$stats, function(temp) temp$overall["Accuracy"])
 
 # for top 100 genes
 temp3 <- subset_by_feat(df, drugname, FALSE, 100)
 result3 <- trainmodel(temp3$X, temp3$Y, drugname, "class")
+saveRDS(result3, sprintf("../train_output/%s/model_%s_100.rds", drugname,drugname))
 bwdata3 <- sapply(result3$stats, function(temp) temp$overall["Accuracy"])
 
 # for top same number of genes
 temp4 <- subset_by_feat(df, drugname, FALSE, result1$metadata$features)
 result4 <- trainmodel(temp4$X, temp4$Y, drugname, "class")
+saveRDS(result4, sprintf("../train_output/%s/model_%s_ntm.rds", drugname,drugname))
 bwdata4 <- sapply(result4$stats, function(temp) temp$overall["Accuracy"])
 
-plotbw(drugname, bwdata1, bwdata2, bwdata3, bwdata4)
+plotbw(drugname)

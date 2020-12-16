@@ -1,7 +1,15 @@
-plotbw <- function(name, bwdata1, bwdata2, bwdata3, bwdata4){
+plotbw <- function(name){
+  tm <- readRDS("../train_output/model_Lapatinib_tm.rds")
+  top500 <- readRDS("../train_output/model_Lapatinib_500.rds")
+  top100 <- readRDS("../train_output/model_Lapatinib_100.rds")
+  ntm <- readRDS("../train_output/model_Lapatinib_ntm.rds")
+  tm_data <- sapply(tm$stats, function(temp) temp$overall["Accuracy"])
+  top500_data <- sapply(top500$stats, function(temp) temp$overall["Accuracy"])
+  top100_data <- sapply(top100$stats, function(temp) temp$overall["Accuracy"])
+  ntm_data <- sapply(ntm$stats, function(temp) temp$overall["Accuracy"])
   data <- data.frame(
     name=c(rep("text_mining",10), rep("500_genes",10), rep("100_genes",10), rep("not_text_mining",10)),
-    value=c(bwdata1, bwdata2, bwdata3, bwdata4)
+    value=c(tm_data, top500_data, top100_data, ntm_data)
   )
   
   data %>%
