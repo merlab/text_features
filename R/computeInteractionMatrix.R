@@ -24,7 +24,6 @@ callingWaterfall <-
     if (is.null(names(x))) { names(x) <- paste("X", 1:length(x), sep=".") }
     
     xx <- x[complete.cases(x)]
-    print("ok1")
     switch (type,
             "IC50" = {
               xx <- -log10(xx)
@@ -50,7 +49,6 @@ callingWaterfall <-
               interfold <- intermediate.fold
             }
     )
-    print("ok2")
     if (length(xx) < 3) {
       tt <- array(NA, dim=length(x), dimnames=list(names(x)))
       if (interfold == 0) {
