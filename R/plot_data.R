@@ -1,10 +1,11 @@
 source("./train_test.R")
-drugname <- "Cediranib"
+drugname <- "Dasatinib"
 pSet <- "GDSC2"
 metric <- "Balanced Accuracy"
 
 plotbw <- function(pSet, drugname, metric){
   tm <- readRDS(sprintf("../train_output/%s_%s_tm.rds", pSet,drugname))
+  print(tm$metadata$label)
   top500 <- readRDS(sprintf("../train_output/%s_%s_500.rds", pSet,drugname))
   top100 <- readRDS(sprintf("../train_output/%s_%s_100.rds", pSet,drugname))
   ntm <- readRDS(sprintf("../train_output/%s_%s_ntm.rds", pSet,drugname))
@@ -26,11 +27,12 @@ plotbw <- function(pSet, drugname, metric){
   )
   
   plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6) 
-  plt <- plt + theme(legend.position="none")
+  plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s", drugname, metric),x="Feature Selection", y = "Percentage")
   return(plt)
 }
 
 plot <- plotbw(pSet,drugname,metric)
+print(plot)
 pdf(sprintf("../result/%s_%s_%s.pdf", pSet,drugname, metric))
 print(plot)
 dev.off()
