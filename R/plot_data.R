@@ -1,14 +1,14 @@
-source("./train_test.R")
 drugname <- "Dasatinib"
 pSet <- "GDSC2"
 metric <- "Balanced Accuracy"
+method <- "glmnet"
 
-plotbw <- function(pSet, drugname, metric){
-  tm <- readRDS(sprintf("../train_output/%s_%s_tm.rds", pSet,drugname))
+plotbw <- function(pSet, drugname, metric, method){
+  tm <- readRDS(sprintf("../train_output/%s_%s_%s_tm.rds", pSet,drugname, method))
   print(tm$metadata$label)
-  top500 <- readRDS(sprintf("../train_output/%s_%s_500.rds", pSet,drugname))
-  top100 <- readRDS(sprintf("../train_output/%s_%s_100.rds", pSet,drugname))
-  ntm <- readRDS(sprintf("../train_output/%s_%s_ntm.rds", pSet,drugname))
+  top500 <- readRDS(sprintf("../train_output/%s_%s_%s_500.rds", pSet,drugname, method))
+  top100 <- readRDS(sprintf("../train_output/%s_%s_%s_100.rds", pSet,drugname, method))
+  ntm <- readRDS(sprintf("../train_output/%s_%s_%s_ntm.rds", pSet,drugname, method))
   if (metric == "Accuracy"){
     tm_data <- sapply(tm$stats, function(temp) temp$overall["Accuracy"])
     top500_data <- sapply(top500$stats, function(temp) temp$overall["Accuracy"])
@@ -31,7 +31,7 @@ plotbw <- function(pSet, drugname, metric){
   return(plt)
 }
 
-plot <- plotbw(pSet,drugname,metric)
+plot <- plotbw(pSet,drugname,metric, method)
 print(plot)
 pdf(sprintf("../result/%s_%s_%s.pdf", pSet,drugname, metric))
 print(plot)
