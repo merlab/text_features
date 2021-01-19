@@ -15,11 +15,12 @@ ci <- cellInfo(GDSC2)
 ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
 GDSC2 <- subsetTo(GDSC2,cells = ci2$cellid)
 
-genespath <- "C:\\Users\\Grace Wu\\text_features\\R\\genes\\"
+genespath <- "C:\\Users\\Grace Wu\\Documents\\text_features\\R\\genes\\"
 
-drugname <- "Dasatinib"
+drugname <- "Erlotinib"
 pSet <- "GDSC2"
-method <- "rf"
+method <- "glmnet"
+problem <- "class"
 
 generate_df <- function(pSet, mDataType, drug){
   #create df
@@ -79,25 +80,36 @@ subset_by_feat <- function(df, drug, textmining, subset_size = 500, cutoff_metho
 trainmodel <- function(x,y,name,type, method){
   trainIndex <- createDataPartition(y, p = .8,
                                     list = TRUE,
-                                    times = 10)
+                                    times = 25)
 
   if(method == "glmnet"){
     tgrid <- expand.grid(alpha=seq(0, 1, 0.2),
                          lambda=seq(0, 10, 1))
   }
   else if (method == "rf"){
-    tgrid <- expand.grid(.mtry = (1:5))
+    tgrid <- expand.grid(.mtry = seq(10,100,10))
   }
-
-  tcontrol <- trainControl(method="repeatedcv",
-                           number= 4,
-                           repeats = 4,
-                           search="grid",
-                           savePredictions ="all",
-                           allowParallel = TRUE,
-                           verboseIter=FALSE,
-                           classProbs = TRUE,
-                           sampling = "up")
+  
+  if (type == "class"){
+    tcontrol <- trainControl(method="repeatedcv",
+                             number= 4,
+                             repeats = 4,
+                             search="grid",
+                             savePredictions ="all",
+                             allowParallel = TRUE,
+                             verboseIter=FALSE,
+                             classProbs = TRUE,
+                             sampling = "up")
+  }
+  else if (type == "regression"){
+    tcontrol <- trainControl(method="repeatedcv",
+                             number= 4,
+                             repeats = 4,
+                             search="grid",
+                             savePredictions ="all",
+                             allowParallel = TRUE,
+                             verboseIter=FALSE)
+  }
 
   pred_sample <- data.frame()
   per <- list()
@@ -110,6 +122,7 @@ trainmodel <- function(x,y,name,type, method){
     preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
     trainTransformed <- predict(preProcValues, x[trIndx, ])
     testTransformed <- predict(preProcValues, x[tsIndx, ])
+    set.seed(1)
 
     if (type == "class"){
       train_result_sample <- train(x=trainTransformed, y=y[trIndx],
@@ -136,10 +149,10 @@ trainmodel <- function(x,y,name,type, method){
                                    trControl=tcontrol)
       train_result_sample$trainingData <- NULL
       pred_sample_n <- data.frame(index = tsIndx,
-                                  predict=predict(train_result_sample, testTransformed),
-                                  original=y[tsIndx],
+                                  pred=predict(train_result_sample, testTransformed),
+                                  obs=y[tsIndx],
                                   resample=res)
-      per[[res]] <- confusionMatrix(data = as.factor(pred_sample_n$predict), reference = as.factor(pred_sample_n$original))
+      per[[res]] <- postResample(pred = pred_sample_n$pred, obs = pred_sample_n$obs)
       pred_sample <- rbind(pred_sample, pred_sample_n)
     }
   }
@@ -152,56 +165,55 @@ trainmodel <- function(x,y,name,type, method){
 
 #ifelse(!dir.exists(file.path("../train_output/", sprintf("%s",drugname))), dir.create(file.path("../train_output/", sprintf("%s",drugname))), FALSE)
 
-files <- list.files(path=genespath, pattern="*.rds", full.names=FALSE, recursive=FALSE)
+files <- list.files(path=genespath, full.names=FALSE, recursive=FALSE)
 
 for (file in files){
-  drugname <- stri_sub(file, 2, -5)
+  drugname <- stri_sub(file, 1, -5)
   print(drugname)
   tryCatch({
     df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", str_to_title(drugname))
 
     print("text mining genes")
     temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed")
-    result1 <- trainmodel(temp1$X, temp1$Y, drugname, "class",method)
-    saveRDS(result1, sprintf("../train_output/%s_%s_%s_tm.rds", pSet,drugname,method))
+    result1 <- trainmodel(temp1$X, temp1$Y, drugname, problem,method)
+    saveRDS(result1, sprintf("../train_output/%s_%s_%s_%s_tm.rds",  pSet,drugname,method, problem))
 
     print("top 500 genes")
     temp2 <- subset_by_feat(df, drugname, FALSE, 500,  cutoff_method = "fixed")
-    result2 <- trainmodel(temp2$X, temp2$Y, drugname, "class", method)
-    saveRDS(result2, sprintf("../train_output/%s_%s_%s_500.rds", pSet,drugname,method))
+    result2 <- trainmodel(temp2$X, temp2$Y, drugname, problem, method)
+    saveRDS(result2, sprintf("../train_output/%s_%s_%s_%s_500.rds", pSet,drugname,method, problem))
 
     print("top 100 genes")
     temp3 <- subset_by_feat(df, drugname, FALSE, 100,  cutoff_method = "fixed")
-    result3 <- trainmodel(temp3$X, temp3$Y, drugname, "class", method)
-    saveRDS(result3, sprintf("../train_output/%s_%s_%s_100.rds", pSet,drugname,method))
+    result3 <- trainmodel(temp3$X, temp3$Y, drugname, problem, method)
+    saveRDS(result3, sprintf("../train_output/%s_%s_%s_%s_100.rds", pSet,drugname,method, problem))
 
     print("not text mining genes")
     temp4 <- subset_by_feat(df, drugname, FALSE, result1$metadata$features, cutoff_method = "fixed")
-    result4 <- trainmodel(temp4$X, temp4$Y, drugname, "class", method)
-    saveRDS(result4, sprintf("../train_output/%s_%s_%s_ntm.rds", pSet,drugname,method))
+    result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem, method)
+    saveRDS(result4, sprintf("../train_output/%s_%s_%s_%s_ntm.rds", pSet,drugname,method, problem))
   },error = function(e) {
     print("Drug not found in database.")})
 }
-
 
 df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", str_to_title(drugname))
 
 print("text mining genes")
 temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed")
-result1 <- trainmodel(temp1$X, temp1$Y, drugname, "class",method)
-saveRDS(result1, sprintf("../train_output/%s_%s_%s_tm.rds", pSet,drugname,method))
+result1 <- trainmodel(temp1$X, temp1$Y, drugname, problem ,method)
+saveRDS(result1, sprintf("../train_output/%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem))
 
 print("top 500 genes")
 temp2 <- subset_by_feat(df, drugname, FALSE, 500,  cutoff_method = "fixed")
-result2 <- trainmodel(temp2$X, temp2$Y, drugname, "class", method)
-saveRDS(result2, sprintf("../train_output/%s_%s_%s_500.rds", pSet,drugname,method))
+result2 <- trainmodel(temp2$X, temp2$Y, drugname, problem, method)
+saveRDS(result2, sprintf("../train_output/%s_%s_%s_%s_500.rds", pSet,drugname,method, problem))
 
 print("top 100 genes")
 temp3 <- subset_by_feat(df, drugname, FALSE, 100,  cutoff_method = "fixed")
-result3 <- trainmodel(temp3$X, temp3$Y, drugname, "class", method)
-saveRDS(result3, sprintf("../train_output/%s_%s_%s_100.rds", pSet,drugname,method))
+result3 <- trainmodel(temp3$X, temp3$Y, drugname, problem, method)
+saveRDS(result3, sprintf("../train_output/%s_%s_%s_%s_100.rds", pSet,drugname,method, problem))
 
 print("not text mining")
 temp4 <- subset_by_feat(df, drugname, FALSE, result1$metadata$features, cutoff_method = "fixed")
-result4 <- trainmodel(temp4$X, temp4$Y, drugname, "class", method)
-saveRDS(result4, sprintf("../train_output/%s_%s_%s_ntm.rds", pSet,drugname,method))
+result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem, method)
+saveRDS(result4, sprintf("../train_output/%s_%s_%s_%s_ntm.rds", pSet,drugname,method, problem))
