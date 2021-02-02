@@ -1,4 +1,4 @@
-drugname <- "Ruxolitinib"
+drugname <- "Foretinib"
 pSet <- "GDSC2"
 metric <- "RMSE"
 method <- "glmnet"
@@ -43,12 +43,12 @@ plotbw <- function(pSet, drugname, metric, method, problem){
   }
   else {
     if (metric == "RMSE"){
-      tm_data <- sapply(tm$stats, function(temp) temp["RMSE"])
-      top500_data <- sapply(top500$stats, function(temp) temp["RMSE"])
-      top100_data <- sapply(top100$stats, function(temp) temp["RMSE"])
-      ntm_data <- sapply(ntm$stats, function(temp) temp["RMSE"])
-      ft_data <- sapply(ft$stats, function(temp) temp["RMSE"])
-      L1000_data <- sapply(L1000$stats, function(temp) temp["RMSE"])
+      tm_data <- sapply(tm, function(temp) temp$stats["RMSE"])
+      top500_data <- sapply(top500, function(temp) temp$stats["RMSE"])
+      top100_data <- sapply(top100, function(temp) temp$stats["RMSE"])
+      ntm_data <- sapply(ntm, function(temp) temp$stats["RMSE"])
+      ft_data <- sapply(ft, function(temp) temp$stats["RMSE"])
+      L1000_data <- sapply(L1000, function(temp) temp$stats["RMSE"])
     }
     else if (metric == "COR"){
       tm_data <- (tm$prediction %>% group_by(tm$prediction$resample) %>% summarise(cor = cor(pred, obs)))$cor
@@ -68,6 +68,7 @@ plotbw <- function(pSet, drugname, metric, method, problem){
     return(plt)
   }
 }
+
 
 plot <- plotbw(pSet,drugname,metric, method, problem)
 print(plot)

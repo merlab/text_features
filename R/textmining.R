@@ -3,10 +3,12 @@ library(RCurl)
 library("data.table")
 
 # input parameters
-topics <- c("NVP-ADW742", "NVP-TAE684", "TG-100-115")
 #topics <- gsub("-", "", topics)
 species <- "9606"
-outpath <- "C:\\Users\\Grace Wu\\text_features\\R\\genes\\"
+outpath <- "C:\\Users\\Grace Wu\\Documents\\text_features\\data\\text_mining_genes\\"
+topics <- as.list(as.data.frame(t(drugInfo(GDSC2)["DRUG_NAME"])))
+gene_count <- data.frame(matrix(ncol = 2, nrow = 0))
+
 
 # initiate remote connection
 # note: RSelenium requires docker container having run the following commands
@@ -39,6 +41,11 @@ for (topic in topics) {
   
   # extract list of genes from txt output
   genes = fread(txt[[1]], sep = ' ', fill=TRUE)
+  print(nrow(genes))
+  gene_count <- rbind(gene_count, c(topic, nrow(genes)))
   saveRDS(genes, paste(outpath, sprintf("%s.rds",topic)))
 }
+names <- c("name", "count")
+colnames(gene_count) <- names
+saveRDS(gene_count, paste(outpath, "gene_count.rds"))
 
