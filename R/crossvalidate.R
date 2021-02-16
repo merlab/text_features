@@ -4,21 +4,26 @@ metric <- "RMSE"
 method <- "glmnet"
 problem <- "regression"
 
+generate_testing_df <- function(pSet, mDataType, drug){
+  #create df
+  df = summarizeData(pSet=pSet, mDataType = mDataType, drug = drug, sensitivity.measure="aac_recomputed")
+  df = df[, !is.na(colData(df)$aac_recomputed)]
+  
+  #remove samples with NA value
+  NAsamples <- apply(assay(df), 2, function(i) any(is.na(i)))
+  df <- df[, !NAsamples]
+  
+  return(df)
+}
+
 CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
-ccle_df <- generate_df(CCLE, "rna", str_to_title(drugname))
 
 predictmodel <- function(pSet, drugname, method, problem){
-  tm <- readRDS(sprintf("../train_output/%s_%s_%s_%s_tm.rds", pSet,drugname, method, problem))
-  return(0)
-  top500 <- readRDS(sprintf("../train_output/%s_%s_%s_%s_500.rds", pSet,drugname, method, problem))
-  top100 <- readRDS(sprintf("../train_output/%s_%s_%s_%s_100.rds", pSet,drugname, method, problem))
-  ntm <- readRDS(sprintf("../train_output/%s_%s_%s_%s_ntm.rds", pSet,drugname, method, problem))
-  ft <- readRDS(sprintf("../train_output/%s_%s_%s_%s_ft.rds", pSet,drugname, method, problem))
-  L1000 <- readRDS(sprintf("../train_output/%s_%s_%s_%s_L1000.rds", pSet,drugname, method, problem))
-  models <- list(tm, top500, top100, ntm, ft, L1000)
-  return(0)
+  models <- list("tm", "500", "100", "ntm", "ft", "L1000")
   for (model in models){
-    fe <- sapply(model, function(temp) temp$model$finalModel$xNames)
+    print(model)
+    data <- readRDS(sprintf("../train_output/%s_%s_%s_%s_%s.rds", pSet,drugname, method, problem,model))
+    fe <- sapply(data, function(temp) temp$model$finalModel$xNames)
     valid <- 1
     for (i in names(fe[1,])){
       if (FALSE == all (fe[,i] %in% rownames(ccle_df))){
@@ -35,7 +40,7 @@ predictmodel <- function(pSet, drugname, method, problem){
     for (i in names(fe[1,])){
       print(sprintf("%s",i))
       ccle_test <- t(assay(ccle_df)[fe[,i],])
-      temppredict <- predict(model[[i]]["model"], newdata = ccle_test)
+      temppredict <- predict(data[[i]]["model"], newdata = ccle_test)
       pred <- temppredict
       stats <- postResample(pred = as.numeric(unlist(temppredict)), obs = ccle_df$aac_recomputed)
       modRes[[i]] <- list("pred" = pred, "stats" = stats)
@@ -45,5 +50,6 @@ predictmodel <- function(pSet, drugname, method, problem){
   return(1)
 }
 
-temp <- predictmodel(GDSC2, drugname, method, problem)
+ccle_df <- generate_testing_df(CCLE, "rna", str_to_title(drugname))
+temp <- predictmodel(pSet, drugname, method, problem)
 
