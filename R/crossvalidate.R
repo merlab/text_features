@@ -1,4 +1,4 @@
-drugname <- "Erlotinib"
+drugname <- "Dasatinib"
 pSet <- "GDSC2"
 metric <- "RMSE"
 method <- "glmnet"
@@ -19,7 +19,7 @@ generate_testing_df <- function(pSet, mDataType, drug){
 CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
 
 predictmodel <- function(pSet, drugname, method, problem){
-  models <- list("tm", "500", "100", "ntm", "ft", "L1000")
+  models <- list("tm", "500", "100", "ntm", "ft_tm", "L1000")
   for (model in models){
     print(model)
     data <- readRDS(sprintf("../train_output/%s_%s_%s_%s_%s.rds", pSet,drugname, method, problem,model))
@@ -27,7 +27,6 @@ predictmodel <- function(pSet, drugname, method, problem){
     valid <- 1
     for (i in names(fe[1,])){
       if (FALSE == all (fe[,i] %in% rownames(ccle_df))){
-        print(sprintf("%s",i))
         print(fe[which(!fe[,i] %in% rownames(ccle_df))])
         valid <- 0
       }
@@ -38,7 +37,6 @@ predictmodel <- function(pSet, drugname, method, problem){
     }
     modRes <- list()
     for (i in names(fe[1,])){
-      print(sprintf("%s",i))
       ccle_test <- t(assay(ccle_df)[fe[,i],])
       temppredict <- predict(data[[i]]["model"], newdata = ccle_test)
       pred <- temppredict
@@ -52,4 +50,17 @@ predictmodel <- function(pSet, drugname, method, problem){
 
 ccle_df <- generate_testing_df(CCLE, "rna", str_to_title(drugname))
 temp <- predictmodel(pSet, drugname, method, problem)
+
+files <- list.files(path=genespath, full.names=FALSE, recursive=FALSE)
+
+for (file in files){
+  drugname <- stri_sub(file, 1, -5)
+  print(drugname)
+  tryCatch({
+    ccle_df <- generate_testing_df(CCLE, "rna", str_to_title(drugname))
+    print("predicting")
+    temp <- predictmodel(pSet, drugname, method, problem)
+  },error = function(e) {
+    print("Drug not found in database.")})
+}
 

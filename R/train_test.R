@@ -9,6 +9,7 @@ library(data.table)
 library(stringi)
 source("./summarizeData.R")
 source("./computeInteractionMatrix.R")
+source("./mRMR.R")
 
 set.seed(1)
 GDSC2 <- readRDS("../data/GDSC2.rds")
@@ -23,7 +24,7 @@ L1000_gene_list <- read.delim("L1000_gene_list.txt")$Symbol
 
 genespath <- "C:\\Users\\Grace Wu\\Documents\\text_features\\R\\genes\\"
 
-drugname <- "Bortezomib"
+drugname <- "Alisertib"
 pSet <- "GDSC2"
 method <- "glmnet"
 problem <- "regression"
@@ -53,15 +54,28 @@ generate_df <- function(pSet, mDataType, drug){
   return(df)
 }
 
-subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE){
+subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE, ft = FALSE){
+  drug <- "Alisertib"
   minedgenes <- readRDS(sprintf("./genes/%s.rds",toupper(drug)))
   #select mined genes
   if (L1000 == TRUE){
     dfout = df[rowData(df)$gene_name %in% L1000_gene_list, ]
   } else if (textmining == TRUE){
     dfout = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
+    if (ft == TRUE && subset_size != 0){
+      featcor <- apply(assay(dfout), 1, function(i) cor(i,dfout$aac_recomputed))
+      featcor <- sort(featcor, decreasing = TRUE)
+      featcor <- featcor[1:100]
+      dfout <- dfout[names(featcor), ]
+    }
   } else if (textmining == FALSE) {
     dfout= df[!(rowData(df)$gene_name %in% minedgenes$Symbol), ]
+    if (ft == TRUE && subset_size != 0){
+      featcor <- apply(assay(dfout), 1, function(i) cor(i,dfout$aac_recomputed))
+      featcor <- sort(featcor, decreasing = TRUE)
+      featcor <- featcor[1:100]
+      dfout <- dfout[names(featcor), ]
+    }
   }
   
   if (subset_size != 0){
@@ -89,9 +103,9 @@ subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff
 
 #second function trains model based on x and y
 trainmodel <- function(x,y,name,type, method, ft = -100, var = -100){
-  trainIndex <- createDataPartition(y, p = .9,
+  trainIndex <- createDataPartition(y, p = .8,
                                     list = TRUE,
-                                    times = 25)
+                                    times = 10)
   if(method == "glmnet"){
     tgrid <- expand.grid(alpha=seq(0, 1, 0.2),
                          lambda=seq(0, 10, 1))
@@ -154,6 +168,10 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var = -100){
                             "stats" = per, "metadata" = metadata)
     } else if (type  == "regression"){
       if (ft > 0){
+        #trainTransformedtest = trainTransformed[,0:4000]
+        #features <- .fs.mRMR(trainTransformedtest, y[trIndx], feature.count = 3897)
+        #trainTransformed <- trainTransformed[, names(features)]
+        #testTransformed <- testTransformed[, names(features)]
         featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,y[trIndx])))
         featcor <- sort(featcor, decreasing = TRUE)
         featcor <- featcor[1:ft]
@@ -179,14 +197,13 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var = -100){
       per <- postResample(pred = pred_sample_n$pred, obs = pred_sample_n$obs)
       pred_sample <- rbind(pred_sample, pred_sample_n)
       metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))##change this line
-      modRes[[res]] <- list("model"=train_result_sample, "prediction" = pred_sample, 
-                            "stats" = per, "metadata" = metadata)
+      modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
+      output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     }
   }
   #saveRDS(train_result_sample, sprintf("model_%s.rds", name))
   #metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
-  #output <- list("prediction" = modRes, "stats" = per)
-  return(modRes)
+  return(list("model" = modRes, "output" = output))
 }
 
 files <- list.files(path=genespath, full.names=FALSE, recursive=FALSE)
@@ -196,50 +213,63 @@ for (file in files){
   print(drugname)
   tryCatch({
     df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", str_to_title(drugname))
-    tm <- readRDS(sprintf("../train_output/%s_%s_%s_%s_tm.rds", pSet,drugname, method, problem))
-    print("feature selection genes")
-    temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-    result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method, ft = tm$Resample01$metadata$features)
-    saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft_tm.rds", pSet,drugname,method, problem))
-    
-    rm(result5, temp5, tm)
+
+    print("text mining genes")
+    temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed")
+    for (i in colnames(temp1$X)){
+      result1 <- trainmodel(temp1$X[,i], temp1$aac, drugname, problem ,method)
+      saveRDS(result1$model, sprintf("../train_output/univariate/model/%s_%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem, i))
+      saveRDS(result1$output, sprintf("../train_output/univariate/output/%s_%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem, i))
+    }
+    rm(temp1, result1)
     
   },error = function(e) {
     print("Drug not found in database.")})
 }
 
-df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", str_to_title(drugname))
+drugname <- "Lapatinib"
 
+univariate_train <- function(df, drugname, problem, method){
+  temp4 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed", ft = TRUE, subset_size = 100)
+  for (i in colnames(temp4$X)){
+    result4 <- trainmodel(temp4$X, temp4$aac, drugname, problem, method)
+    saveRDS(result4$model, sprintf("../train_output/univariate/model/Bortezomib_ntm/%s_%s_%s_%s_%s_ntm.rds", pSet,drugname,method, problem, i))
+    saveRDS(result4$output, sprintf("../train_output/univariate/output/Bortezomib_ntm/%s_%s_%s_%s_%s_ntm.rds", pSet,drugname,method, problem, i))
+  }
+  rm(temp4, result4)
+  temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed", ft = TRUE, subset_size = 100)
+  for (i in colnames(temp1$X)){
+    result1 <- trainmodel(temp1$X, temp1$aac, drugname, problem ,method)
+    saveRDS(result1$model, sprintf("../train_output/univariate/model/Bortezomib_tm/%s_%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem, i))
+    saveRDS(result1$output, sprintf("../train_output/univariate/output/Bortezomib_tm/%s_%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem, i))
+  }
+}
+
+df <- generate_df(GDSC2, "Kallisto_0.46.1.rnaseq", str_to_title(drugname))
 print("text mining genes")
 temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed")
 result1 <- trainmodel(temp1$X, temp1$aac, drugname, problem ,method)
 #saveRDS(result1, sprintf("../train_output/%s_%s_%s_%s_tm.rds", pSet,drugname,method, problem))
-saveRDS(result1, sprintf("../train_output/temp/%s_%s_%s_%s_tm_0.9.rds", pSet,drugname,method, problem))
+saveRDS(result1, sprintf("../train_output/%s_%s_%s_%s_tm_ft.rds", pSet,drugname,method, problem))
 rm(result1)
 
 print("feature selection genes 100")
 temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
 result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method, ft = 100)
 #saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft.rds", pSet,drugname,method, problem))
-saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_0.9_100.rds", pSet,drugname,method, problem))
+saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_100.rds", pSet,drugname,method, problem))
 
 print("feature selection genes 500")
 temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
 result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method, ft = 500)
 #saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft.rds", pSet,drugname,method, problem))
-saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_0.8_500.rds", pSet,drugname,method, problem))
-
-print("feature selection genes 200")
-temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method, ft = 200)
-#saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft.rds", pSet,drugname,method, problem))
-saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_0.8_200.rds", pSet,drugname,method, problem))
+saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_500.rds", pSet,drugname,method, problem))
 
 print("feature selection genes ft")
 temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method, ft = 3897)
+result5 <- trainmodel(temp5$X, temp5$aac, drugname, problem ,method)
 #saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft.rds", pSet,drugname,method, problem))
-saveRDS(result5, sprintf("../train_output/temp/%s_%s_%s_%s_ft_0.8_tm.rds", pSet,drugname,method, problem))
+saveRDS(result5, sprintf("../train_output/%s_%s_%s_%s_ft_100.rds", pSet,drugname,method, problem))
 
 print("top 500 genes")
 temp2 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
