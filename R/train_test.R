@@ -27,7 +27,7 @@ generate_df <- function(pSet, mDataType, drugname){
   return(df)
 }
 
-subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE){
+subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE, var_count = 0){
   minedgenes <- readRDS(sprintf("./genes/%s.rds",toupper(drug)))
   #select mined genes
   if (L1000 == TRUE){
@@ -44,6 +44,14 @@ subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff
 
   #produce x and y, turn y to discrete
   x <- t(assay(dfout))
+  
+  if (var_count > 0){
+    gene_vars <- abs(apply(x, 2, var))
+    gene_vars <- sort(gene_vars, decreasing = TRUE)
+    gene_vars <- gene_vars[1:var_count]
+    x <- x[, names(gene_vars)]
+  }
+  
   y <- colData(dfout)$aac_recomputed
   if (cutoff_method == "waterfall"){
     cutoff <- callingWaterfall(y, "AUC")
@@ -140,7 +148,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
         trainTransformed <- trainTransformed[, names(featcor)]
         testTransformed <- testTransformed[, names(featcor)]
       } else if (var_count > 0){
-        gene_vars <- abs(apply(x[trIndx, ], 2, function(i) var))
+        gene_vars <- abs(apply(x[trIndx,], 2, var))
         gene_vars <- sort(gene_vars, decreasing = TRUE)
         gene_vars <- gene_vars[1:var_count]
         trainTransformed <- trainTransformed[, names(gene_vars)]
@@ -167,3 +175,20 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
   #metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
   return(list("model" = modRes, "output" = output))
 }
+
+drugname <- "Bortezomib"
+
+df <- generate_df(GDSC2, mDataType, str_to_title(drugname))
+print("top 500 genes")
+temp2 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed", var_count = 500)
+result2 <- trainmodel(temp2$X, temp2$Y, drugname, problem, method)
+saveRDS(result2$model, sprintf("../train_output/%s/%s/model/%s_%s_%s_500_fixed.rds", pSet,problem,drugname,method, problem))
+saveRDS(result2$output, sprintf("../train_output/%s/%s/output/%s_%s_%s_500_fixed.rds", pSet,problem,drugname,method, problem))
+rm(result2, temp2)
+
+print("top 100 genes")
+temp3 <- subset_by_feat(df, drugname, FALSE,  cutoff_method = "fixed", var_count = 100)
+result3 <- trainmodel(temp3$X, temp3$Y, drugname, problem, method)
+saveRDS(result3$model, sprintf("../train_output/%s/%s/model/%s_%s_%s_100_fixed.rds", pSet,problem,drugname,method, problem))
+saveRDS(result3$output, sprintf("../train_output/%s/%s/output/%s_%s_%s_100_fixed.rds", pSet,problem,drugname,method, problem))
+rm(result3, temp3)

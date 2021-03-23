@@ -6,7 +6,7 @@ library("data.table")
 #topics <- gsub("-", "", topics)
 species <- "9606"
 outpath <- "C:\\Users\\Grace Wu\\Documents\\text_features\\data\\text_mining_genes\\"
-topics <- as.list(as.data.frame(t(drugInfo(GDSC2)["DRUG_NAME"])))
+topics <- as.list(commondrugs)
 gene_count <- data.frame(matrix(ncol = 2, nrow = 0))
 
 
@@ -47,5 +47,5 @@ for (topic in topics) {
 }
 names <- c("name", "count")
 colnames(gene_count) <- names
-saveRDS(gene_count, paste(outpath, "gene_count.rds"))
+saveRDS(gene_count, paste("../", "gene_count.rds"))
 
