@@ -177,8 +177,8 @@ plotbw_100 <- function(pSet, drugname, metric, method, problem){
   return(plt)
 }
 
-drugname <- "Dactolisib"
-plot<- plotbw_test(pSet, drugname, metric, method, problem)
+drugname <- "Dabrafenib"
+plot<- plotbw_train(pSet, drugname, metric, method, problem)
 print(plot)
 
 pdf(sprintf("../result/test.pdf", pSet,drugname, metric, problem))
