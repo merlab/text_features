@@ -1,13 +1,21 @@
-library(hrbrthemes)
 library(viridis)
 library(ggpubr)
 library(dplyr)
 
-drugname <- "Bortezomib"
-pSet <- "CCLE"
-metric <- "COR"
-method <- "glmnet"
-problem <- "regression"
+args = commandArgs(trailingOnly=TRUE)
+
+if (length(args) < 6) {
+  stop("Please supply arguments: pSet, method, problem, drugname, metric, type", call.=FALSE)
+} else if (length(args)==6) {
+  pSet <- args[1]
+  method <- args[2]
+  problem <- args[3]
+  drugname <- args[4]
+  metric <- args[5]
+  type <- args[6]
+}
+
+print(sprintf("pSet: %s, method: %s, problem: %s, drugname: %s, metric: %s, type: %s", pSet, method, problem, drugname, metric, type))
 
 plot_univariate <- function(pSet, drugname, abs = FALSE){
   tm <- readRDS(sprintf("../train_output/univariate/%s/%s_tm.rds", pSet,drugname))
@@ -27,13 +35,13 @@ plot_univariate <- function(pSet, drugname, abs = FALSE){
   return(plt)
 }
 
-plotbw_train <- function(pSet, drugname, metric, method, problem){
-  tm <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_tm.rds", drugname, method, problem))
-  top500 <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_500.rds", drugname, method, problem))
-  top100 <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_100.rds", drugname, method, problem))
-  ntm <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_ntm.rds", drugname, method, problem))
-  ft <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_ft.rds", drugname, method, problem))
-  L1000 <- readRDS(sprintf("../train_output/CCLE/regression/output/%s_%s_%s_L1000.rds",drugname, method, problem))
+plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc){
+  tm <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_tm.rds", pset, problem, drugname, method, problem))
+  top500 <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_500.rds", pset, problem, drugname, method, problem))
+  top100 <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_100.rds", pset, problem, drugname, method, problem))
+  ntm <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_ntm.rds", pset, problem, drugname, method, problem))
+  ft <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_ft.rds", pset, problem, drugname, method, problem))
+  L1000 <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_L1000.rds",pset, problem, drugname, method, problem))
   
   if (problem == "class"){
     if (metric == "Accuracy"){
@@ -94,13 +102,13 @@ plotbw_train <- function(pSet, drugname, metric, method, problem){
   }
 }
 
-plotbw_test <- function(pSet, drugname, metric, method, problem){
-  tm <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_tm.rds", drugname, method, problem))
-  top500 <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_500.rds", drugname, method, problem))
-  top100 <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_100.rds", drugname, method, problem))
-  ntm <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_ntm.rds", drugname, method, problem))
-  ft <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_ft.rds", drugname, method, problem))
-  L1000 <- readRDS(sprintf("../test_output/GDSC2/%s_%s_%s_L1000.rds", drugname, method, problem))
+plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc){
+  tm <- readRDS(sprintf("../test_output/%s/%s_%s_%s_tm.rds", pSet, drugname, method, problem))
+  top500 <- readRDS(sprintf("../test_output/%s/%s_%s_%s_500.rds",pSet, drugname, method, problem))
+  top100 <- readRDS(sprintf("../test_output/%s/%s_%s_%s_100.rds", pSet,drugname, method, problem))
+  ntm <- readRDS(sprintf("../test_output/%s/%s_%s_%s_ntm.rds",pSet, drugname, method, problem))
+  ft <- readRDS(sprintf("../test_output/%s/%s_%s_%s_ft.rds",pSet, drugname, method, problem))
+  L1000 <- readRDS(sprintf("../test_output/%s/%s_%s_%s_L1000.rds", pSet,drugname, method, problem))
   
   if (problem == "class"){
     if (metric == "Accuracy"){
@@ -161,26 +169,14 @@ plotbw_test <- function(pSet, drugname, metric, method, problem){
   }
 }
 
-plotbw_100 <- function(pSet, drugname, metric, method, problem){
-  top100 <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_100_fixed.rds", pSet,problem,drugname, method, problem))
-  top500 <- readRDS(sprintf("../train_output/%s/%s/output/%s_%s_%s_500_fixed.rds", pSet,problem,drugname, method, problem))
-  top100_data <- sapply(top100, function(temp) temp$stats["RMSE"])
-  top500_data <- sapply(top500, function(temp) temp$stats["RMSE"])
-  #top500_data <- sapply(top500, function(temp) temp$prediction %>% summarise(cor = list(cor(pred, obs))))
-  #top100_data <- sapply(top100, function(temp) temp$prediction %>% summarise(cor = list(cor(pred, obs))))
-  data <- data.frame(
-    name=c(rep("100_ft", 25), rep("500_ft", 25)),
-    value=c(unlist(top100_data), unlist(top500_data))
-  )
-  plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6)
-  plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s", drugname, metric),x="Feature Selection", y = sprintf("%s", metric))
-  return(plt)
-}
+sample_count_ccle <- readRDS("../data/ sample_count_ccle.rds")
+sample_count_gdsc <- readRDS("../data/ sample_count_gdsc.rds")
 
-drugname <- "Dabrafenib"
-plot<- plotbw_train(pSet, drugname, metric, method, problem)
-print(plot)
-
-pdf(sprintf("../result/test.pdf", pSet,drugname, metric, problem))
+if (type == "train"){
+  plot<- plotbw_train(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc)
+} else if (type == "test"){
+  plot<- plotbw_test(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc)
+} 
+pdf(sprintf("../result/%s/%s_%s_%s_%s.pdf", type, pSet,drugname, metric, problem))
 print(plot)
 dev.off()
