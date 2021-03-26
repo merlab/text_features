@@ -28,7 +28,7 @@ generate_df <- function(pSet, mDataType, drugname){
 }
 
 subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE, var_count = 0){
-  minedgenes <- readRDS(sprintf("./genes/%s.rds",toupper(drug)))
+  minedgenes <- readRDS(sprintf("./genes/%s.rds",drug))
   #select mined genes
   if (L1000 == TRUE){
     dfout = df[rowData(df)$gene_name %in% L1000_gene_list, ]

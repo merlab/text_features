@@ -43,7 +43,7 @@ for (topic in topics) {
   genes = fread(txt[[1]], sep = ' ', fill=TRUE)
   print(nrow(genes))
   gene_count <- rbind(gene_count, c(topic, nrow(genes)))
-  saveRDS(genes, paste(outpath, sprintf("%s.rds",topic)))
+  saveRDS(genes, paste(outpath, sprintf("%s.rds",topic), sep = ""))
 }
 names <- c("name", "count")
 colnames(gene_count) <- names
