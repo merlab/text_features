@@ -24,6 +24,8 @@ if (length(args) < 3) {
   drugname <- NULL
 }
 
+print(sprintf("pSet: %s, method: %s, problem: %s", pSet, method, problem))
+
 genespath <- "./genes/"
 
 if (pSet == "CCLE"){
@@ -57,7 +59,7 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
   models <- list("tm", "500", "100", "ntm", "ft", "L1000")
   for (model in models){
     print(model)
-    data <- readRDS(sprintf("../train_output/%s/%s/model/%s_%s_%s_%s.rds",trainset, problem, drugname, method, problem,model))
+    data <- readRDS(sprintf("../train_output/%s/%s/model/%s_%s_%s.rds",trainset, problem, drugname, method,model))
     fe <- sapply(data, function(temp) temp$model$finalModel$xNames)
     valid <- 1
     for (i in names(fe[1,])){
@@ -72,13 +74,15 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
     }
     modRes <- list()
     for (i in names(fe[1,])){
-      test <- t(assay(df)[fe[,i],])
+      test<- t(assay(df)[fe[,i],])
+      preProcValues <- preProcess(test, method = c("center", "scale"))
+      test <- predict(preProcValues, test)
       temppredict <- predict(data[[i]]["model"], newdata = test)
       pred <- temppredict$model
       stats <- postResample(pred = as.numeric(unlist(temppredict)), obs = df$aac_recomputed)
       modRes[[i]] <- list("pred" = pred, "original" = df$aac_recomputed, "stats" = stats)
     }
-    saveRDS(modRes, sprintf("../test_output/%s/%s_%s_%s_%s.rds", pSet, drugname,method, problem,model))
+    saveRDS(modRes, sprintf("../test_output/%s/%s/%s_%s_%s.rds", pSet, problem, drugname,method,model))
   }
   return(1)
 }
@@ -95,5 +99,5 @@ if (is.null(drugname)){
   }
 } else {
   df <- generate_testing_df(dataset, mDataType, str_to_title(drugname))
-  temp <- predictmodel(pSet, trainset, drugname, method, problem)
+  predictmodel(pSet, trainset, drugname, method, problem)
 }

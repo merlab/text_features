@@ -121,7 +121,6 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                                    method=sprintf("%s", method),
                                    maximize = TRUE,
                                    tuneGrid=tgrid,
-                                   ntree = 100,
                                    trControl=tcontrol)
       train_result_sample$trainingData <- NULL
       predictedRes  <- predict(train_result_sample, testTransformed, type = c("raw"))
@@ -133,7 +132,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                                   resample=res)
       per <- confusionMatrix(data = as.factor(pred_sample_n$predict.class), reference = as.factor(pred_sample_n$obs))
       pred_sample <- rbind(pred_sample, pred_sample_n)
-      metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))##change this line
+      metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
       modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     } else if (type  == "regression"){
