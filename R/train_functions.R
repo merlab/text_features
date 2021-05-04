@@ -73,37 +73,39 @@ subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff
 trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
   set.seed(1)
   if(method == "glmnet"){
-    tgrid <- expand.grid(alpha=seq(0, 1, 0.2),
-                         lambda=seq(0, 10, 1))
+    tgrid <- expand.grid(alpha=seq(0.0, 1, 0.1),
+                         lambda = 10^seq(-3, 3, length = 10))
   }
   else if (method == "rf"){
-    tgrid <- expand.grid(.mtry = seq(10,100,10))
+    tgrid <- expand.grid(.mtry = seq(1,1001,100))
   }
   if (type == "class"){
-    tcontrol <- trainControl(method="repeatedcv",
+    tcontrol <- trainControl(method="cv",
                              number= 4,
-                             repeats = 4,
                              search="grid",
-                             savePredictions ="all",
                              allowParallel = TRUE,
-                             verboseIter=FALSE,
+                             verboseIter=TRUE,
+                             savePredictions=c("all", "final", "none")[3],
+                             returnResamp   =c("all", "final", "none")[3],
+                             returnData = FALSE,
                              classProbs = TRUE,
                              sampling = "up")
     y <- y$class
   }
   else if (type == "regression"){
-    tcontrol <- trainControl(method="repeatedcv",
-                             number= 4,
-                             repeats = 4,
-                             search="grid",
-                             savePredictions ="all",
-                             allowParallel = TRUE,
-                             verboseIter=FALSE)
+   
+    tcontrol <- trainControl(method = "cv", #"repeatedcv",
+                             number= 4, #repeats = 4,
+                             search="grid", allowParallel = TRUE,
+                             verboseIter=FALSE,
+                             savePredictions=c("all", "final", "none")[3],
+                             returnResamp   =c("all", "final", "none")[3],
+                             returnData = FALSE)
     y <- y$aac
   }
   trainIndex <- createDataPartition(y, p = .8,
                                     list = TRUE,
-                                    times = 25)
+                                    times = 10)
   pred_sample <- data.frame()
   per <- list()
   modRes <- list()
@@ -119,7 +121,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
     if (type == "class"){
       train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                    method=sprintf("%s", method),
-                                   maximize = TRUE,
+                                   maximize = FALSE,
                                    tuneGrid=tgrid,
                                    trControl=tcontrol)
       train_result_sample$trainingData <- NULL
@@ -149,11 +151,20 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
         trainTransformed <- trainTransformed[, names(gene_vars)]
         testTransformed <- testTransformed[, names(gene_vars)]
       }
-      train_result_sample <- train(x=trainTransformed, y=y[trIndx],
-                                   method=sprintf("%s", method),
-                                   maximize = TRUE,
-                                   tuneGrid=tgrid,
-                                   trControl=tcontrol)
+      if (method == "glmnet"){
+        train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                     method=sprintf("%s", method),
+                                     maximize = FALSE,
+                                     tuneGrid=tgrid,
+                                     trControl=tcontrol)
+      } else if (method == "rf"){
+        train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                     method=sprintf("%s", method),
+                                     maximize = FALSE,
+                                     tuneGrid=tgrid,
+                                     ntrees=100,
+                                     trControl=tcontrol)
+      }
       train_result_sample$trainingData <- NULL
       pred_sample_n <- data.frame(index = tsIndx,
                                   pred=predict(train_result_sample, testTransformed),

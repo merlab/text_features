@@ -1,6 +1,8 @@
 library(viridis)
 library(ggpubr)
 library(dplyr)
+library(Metrics)
+
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -55,31 +57,39 @@ plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_c
   
   if (problem == "class"){
     if (metric == "Accuracy"){
-      tm_data <- sapply(tm$stats, function(temp) temp$overall["Accuracy"])
-      top500_data <- sapply(top500$stats, function(temp) temp$overall["Accuracy"])
-      top100_data <- sapply(top100$stats, function(temp) temp$overall["Accuracy"])
-      ntm_data <- sapply(ntm$stats, function(temp) temp$overall["Accuracy"])
+      tm_data <- sapply(tm, function(temp) temp$stats$overall["Accuracy"])
+      top500_data <- sapply(top500, function(temp) temp$stats$overall["Accuracy"])
+      top100_data <- sapply(top100, function(temp) temp$stats$overall["Accuracy"])
+      ntm_data <- sapply(ntm, function(temp) temp$stats$overall["Accuracy"])
+      ft_data <- sapply(ft, function(temp) temp$stats$overall["Accuracy"])
+      L1000_data <- sapply(L1000, function(temp) temp$stats$overall["Accuracy"])
     }
-    else if (metric == "Balanced Accuracy"){
-      tm_data <- sapply(tm$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      top500_data <- sapply(top500$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      top100_data <- sapply(top100$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      ntm_data <- sapply(ntm$stats, function(temp) temp$byClass["Balanced Accuracy"])
+    else if (metric == "BalancedAccuracy"){
+      tm_data <- sapply(tm, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      top500_data <- sapply(top500, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      top100_data <- sapply(top100, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      ntm_data <- sapply(ntm, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      ft_data <- sapply(ft, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      L1000_data <- sapply(L1000, function(temp) temp$stats$byClass["Balanced Accuracy"])
     }
     else if (metric == "AUC"){
-      tm_data <- (tm$prediction %>% group_by(tm$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      top500_data <- (top500$prediction %>% group_by(top500$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      top100_data <- (top100$prediction %>% group_by(top100$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      ntm_data <- (ntm$prediction %>% group_by(ntm$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
+      tm_data <- sapply(tm, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
+      top500_data <- sapply(top500, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
+      top100_data <- sapply(top100, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
+      ntm_data <- sapply(ntm, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
+      ft_data <- sapply(ft, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
+      L1000_data <- sapply(L1000, function(temp) temp$prediction %>% summarise(auc = list(auc(ifelse(obs == "sensitive",1,0),predict.prob.sensitive))))
       
     }
     data <- data.frame(
-      name=c(rep("text_mining",25), rep("500_genes",25), rep("100_genes",25), rep("not_text_mining",25)),
-      value=c(tm_data, top500_data, top100_data, ntm_data)
+      name=c(rep("500",10), rep("100",10), rep("tm",10), rep("ntm",10), rep("ft",10), rep("L1000",10)),
+      value=c(unlist(top500_data), unlist(top100_data), unlist(tm_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
-    
-    plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6) 
-    plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s", drugname, metric),x="Feature Selection", y = "Percentage")
+    num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
+    num_samples_ccle <- sample_count_ccle[sample_count_ccle$name == drugname,]$count
+    plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6)
+    plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s %s", pSet,drugname, metric),x="Feature Selection", y = sprintf("%s", metric))
+    plt <- plt + annotate("text", -Inf, Inf, label = sprintf("CCLE Samples: %s\nGDSC Samples: %s", num_samples_ccle, num_samples_gdsc), hjust = 0, vjust = 1)
     return(plt)
   }
   else {
@@ -100,7 +110,7 @@ plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_c
       L1000_data <- sapply(L1000, function(temp) temp$prediction %>% summarise(cor = list(cor(pred, obs))))
     }
     data <- data.frame(
-      name=c(rep("500_genes",25), rep("100_genes",25), rep("tm_genes",25), rep("ntm_genes",25), rep("top_cor",25), rep("L1000_genes",25)),
+      name=c(rep("500",25), rep("100",25), rep("tm",25), rep("ntm",25), rep("ft",25), rep("L1000",25)),
       value=c(unlist(top500_data), unlist(top100_data), unlist(tm_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
@@ -114,42 +124,50 @@ plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_c
 
 plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc){
   tm <- readRDS(sprintf("../test_output/%s/%s/%s_%s_tm.rds", pSet, problem, drugname, method))
-  top500 <- readRDS(sprintf("../test_output/%s/%s/%s_%s_500.rds",pSet, problem, drugname, method))
+  top500 <- readRDS(sprintf("../test_output/%s/%s/%s_%s_500.rds", pSet, problem, drugname, method))
   top100 <- readRDS(sprintf("../test_output/%s/%s/%s_%s_100.rds", pSet, problem, drugname, method))
-  ntm <- readRDS(sprintf("../test_output/%s/%s/%s_%s_ntm.rds",pSet, problem, drugname, method))
-  ft <- readRDS(sprintf("../test_output/%s/%s/%s_%s_ft.rds",pSet, problem, drugname, method))
-  L1000 <- readRDS(sprintf("../test_output/%s/%s/%s_%s_L1000.rds", pSet, problem, drugname, method))
+  ntm <- readRDS(sprintf("../test_output/%s/%s/%s_%s_ntm.rds", pSet, problem, drugname, method))
+  ft <- readRDS(sprintf("../test_output/%s/%s/%s_%s_ft.rds", pSet, problem, drugname, method))
+  L1000 <- readRDS(sprintf("../test_output/%s/%s/%s_%s_L1000.rds",pSet, problem, drugname, method))
   
   sample_count_ccle <- readRDS("../data/sample_count_ccle.rds")
   sample_count_gdsc <- readRDS("../data/sample_count_gdsc.rds")
   
   if (problem == "class"){
     if (metric == "Accuracy"){
-      tm_data <- sapply(tm$stats, function(temp) temp$overall["Accuracy"])
-      top500_data <- sapply(top500$stats, function(temp) temp$overall["Accuracy"])
-      top100_data <- sapply(top100$stats, function(temp) temp$overall["Accuracy"])
-      ntm_data <- sapply(ntm$stats, function(temp) temp$overall["Accuracy"])
+      tm_data <- sapply(tm, function(temp) temp$stats$overall["Accuracy"])
+      top500_data <- sapply(top500, function(temp) temp$stats$overall["Accuracy"])
+      top100_data <- sapply(top100, function(temp) temp$stats$overall["Accuracy"])
+      ntm_data <- sapply(ntm, function(temp) temp$stats$overall["Accuracy"])
+      ft_data <- sapply(ft, function(temp) temp$stats$overall["Accuracy"])
+      L1000_data <- sapply(L1000, function(temp) temp$stats$overall["Accuracy"])
     }
-    else if (metric == "Balanced Accuracy"){
-      tm_data <- sapply(tm$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      top500_data <- sapply(top500$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      top100_data <- sapply(top100$stats, function(temp) temp$byClass["Balanced Accuracy"])
-      ntm_data <- sapply(ntm$stats, function(temp) temp$byClass["Balanced Accuracy"])
+    else if (metric == "BalancedAccuracy"){
+      tm_data <- sapply(tm, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      top500_data <- sapply(top500, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      top100_data <- sapply(top100, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      ntm_data <- sapply(ntm, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      ft_data <- sapply(ft, function(temp) temp$stats$byClass["Balanced Accuracy"])
+      L1000_data <- sapply(L1000, function(temp) temp$stats$byClass["Balanced Accuracy"])
     }
     else if (metric == "AUC"){
-      tm_data <- (tm$prediction %>% group_by(tm$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      top500_data <- (top500$prediction %>% group_by(top500$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      top100_data <- (top100$prediction %>% group_by(top100$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
-      ntm_data <- (ntm$prediction %>% group_by(ntm$prediction$resample) %>% summarise(auc = as.double(auc(original,predict.prob.resistant))))$auc
+      tm_data <- sapply(tm, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      top500_data <- sapply(top500, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      top100_data <- sapply(top100, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      ntm_data <- sapply(ntm, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      ft_data <- sapply(ft, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      L1000_data <- sapply(L1000, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
       
     }
     data <- data.frame(
-      name=c(rep("text_mining",25), rep("500_genes",25), rep("100_genes",25), rep("not_text_mining",25)),
-      value=c(tm_data, top500_data, top100_data, ntm_data)
+      name=c(rep("500",10), rep("100",10), rep("tm",10), rep("ntm",10), rep("ft",10), rep("L1000",10)),
+      value=c(unlist(top500_data), unlist(top100_data), unlist(tm_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
-    
-    plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6) 
-    plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s", drugname, metric),x="Feature Selection", y = "Percentage")
+    num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
+    num_samples_ccle <- sample_count_ccle[sample_count_ccle$name == drugname,]$count
+    plt <- ggplot(data, aes(x=name, y=value, fill=name)) + geom_boxplot(alpha=0.6)
+    plt <- plt + theme(legend.position="none") + labs(title=sprintf("%s %s %s", pSet,drugname, metric),x="Feature Selection", y = sprintf("%s", metric))
+    plt <- plt + annotate("text", -Inf, Inf, label = sprintf("CCLE Samples: %s\nGDSC Samples: %s", num_samples_ccle, num_samples_gdsc), hjust = 0, vjust = 1)
     return(plt)
   }
   else {
@@ -170,7 +188,7 @@ plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_cc
       L1000_data <- sapply(L1000, function(temp) cor(temp$pred, temp$original))
     }
     data <- data.frame(
-      name=c(rep("text_mining",25), rep("500_genes", 25), rep("100_genes",25), rep("not_text_mining",25), rep("top_cor", 25), rep("L1000", 25)),
+      name=c(rep("tm",25), rep("500", 25), rep("100",25), rep("ntm",25), rep("ft", 25), rep("L1000", 25)),
       value=c(unlist(tm_data), unlist(top500_data), unlist(top100_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count

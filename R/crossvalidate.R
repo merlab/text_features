@@ -77,9 +77,17 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
       test<- t(assay(df)[fe[,i],])
       preProcValues <- preProcess(test, method = c("center", "scale"))
       test <- predict(preProcValues, test)
-      temppredict <- predict(data[[i]]["model"], newdata = test)
-      pred <- temppredict$model
-      stats <- postResample(pred = as.numeric(unlist(temppredict)), obs = df$aac_recomputed)
+      if (problem == "regression"){
+        temppredict <- predict(data[[i]]["model"], newdata = test)
+        pred <- temppredict$model
+        stats <- postResample(pred = as.numeric(unlist(temppredict)), obs = df$aac_recomputed)
+      } else if (problem == "class") {
+        y2 <- ifelse(df$aac_recomputed >= 0.2,"sensitive","resistant")
+        probpredict <- predict(data[[i]]["model"], newdata = test, type = c("prob"))
+        rawpredict <- predict(data[[i]]["model"], newdata = test)
+        pred <- list("class" = rawpredict$model, "prob" = probpredict$model, "obs" = as.vector(y2))
+        stats <- confusionMatrix(data = as.factor(unlist(rawpredict)), reference = as.factor(y2))
+      }
       modRes[[i]] <- list("pred" = pred, "original" = df$aac_recomputed, "stats" = stats)
     }
     saveRDS(modRes, sprintf("../test_output/%s/%s/%s_%s_%s.rds", pSet, problem, drugname,method,model))
