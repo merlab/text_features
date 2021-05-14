@@ -70,13 +70,6 @@ for (file in files){
   tm <- ncol(temp1$X)
   rm(result1, temp1)
   
-  print("not text mining")
-  temp4 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-  result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem, method, var_count = tm)
-  saveRDS(result4$model, sprintf("../train_output/%s/%s/model/%s_%s_ntm.rds", pSet,problem,drugname,method))
-  saveRDS(result4$output, sprintf("../train_output/%s/%s/output/%s_%s_ntm.rds", pSet,problem,drugname,method))
-  rm(result4, temp4)
-  
   print("feature selection genes ft")
   temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
   result5 <- trainmodel(temp5$X, temp5$Y, drugname, problem ,method, ft = tm)
@@ -98,6 +91,12 @@ for (file in files){
   saveRDS(result3$output, sprintf("../train_output/%s/%s/output/%s_%s_100.rds", pSet,problem,drugname,method))
   rm(result3, temp3)
   
+  print("not text mining")
+  temp4 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
+  result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem, method, var_count = tm)
+  saveRDS(result4$model, sprintf("../train_output/%s/%s/model/%s_%s_ntm.rds", pSet,problem,drugname,method))
+  saveRDS(result4$output, sprintf("../train_output/%s/%s/output/%s_%s_ntm.rds", pSet,problem,drugname,method))
+  rm(result4, temp4)
   
   print("L1000 genes")
   temp6 <- subset_by_feat(df, drugname, cutoff_method = "fixed", L1000 = TRUE)

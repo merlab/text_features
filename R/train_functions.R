@@ -84,13 +84,18 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                              number= 4,
                              search="grid",
                              allowParallel = TRUE,
-                             verboseIter=TRUE,
+                             verboseIter=FALSE,
                              savePredictions=c("all", "final", "none")[3],
                              returnResamp   =c("all", "final", "none")[3],
+                             trim = TRUE,
                              returnData = FALSE,
                              classProbs = TRUE,
                              sampling = "up")
+    ynum <- y$aac
     y <- y$class
+    trainIndex <- createDataPartition(y, p = .8,
+                                      list = TRUE,
+                                      times = 10)
   }
   else if (type == "regression"){
    
@@ -98,14 +103,15 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                              number= 4, #repeats = 4,
                              search="grid", allowParallel = TRUE,
                              verboseIter=FALSE,
+                             trim = TRUE,
                              savePredictions=c("all", "final", "none")[3],
                              returnResamp   =c("all", "final", "none")[3],
                              returnData = FALSE)
     y <- y$aac
+    trainIndex <- createDataPartition(y, p = .8,
+                                      list = TRUE,
+                                      times = 20)
   }
-  trainIndex <- createDataPartition(y, p = .8,
-                                    list = TRUE,
-                                    times = 10)
   pred_sample <- data.frame()
   per <- list()
   modRes <- list()
@@ -119,12 +125,35 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
     trainTransformed <- predict(preProcValues, x[trIndx, ])
     testTransformed <- predict(preProcValues, x[tsIndx, ])
     if (type == "class"){
-      train_result_sample <- train(x=trainTransformed, y=y[trIndx],
-                                   method=sprintf("%s", method),
-                                   maximize = FALSE,
-                                   tuneGrid=tgrid,
-                                   trControl=tcontrol)
+      if (ft > 0){
+        featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,ynum[trIndx])))
+        featcor <- sort(featcor, decreasing = TRUE)
+        featcor <- featcor[1:ft]
+        trainTransformed <- trainTransformed[, names(featcor)]
+        testTransformed <- testTransformed[, names(featcor)]
+      } else if (var_count > 0){
+        gene_vars <- abs(apply(x[trIndx,], 2, var))
+        gene_vars <- sort(gene_vars, decreasing = TRUE)
+        gene_vars <- gene_vars[1:var_count]
+        trainTransformed <- trainTransformed[, names(gene_vars)]
+        testTransformed <- testTransformed[, names(gene_vars)]
+      }
+      if (method == "glmnet"){
+        train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                     method=sprintf("%s", method),
+                                     maximize = FALSE,
+                                     tuneGrid=tgrid,
+                                     trControl=tcontrol)
+      } else if (method == "rf"){
+        train_result_sample <- train(x=trainTransformed, y=y[trIndx],
+                                     method=sprintf("%s", method),
+                                     maximize = FALSE,
+                                     tuneGrid=tgrid,
+                                     ntrees=100,
+                                     trControl=tcontrol)
+      }
       train_result_sample$trainingData <- NULL
+      train_result_sample$finalModel$call <- NULL
       predictedRes  <- predict(train_result_sample, testTransformed, type = c("raw"))
       predictedResProb  <- predict(train_result_sample, testTransformed, type = c("prob"))
       pred_sample_n <- data.frame(index = tsIndx,
@@ -136,6 +165,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       pred_sample <- rbind(pred_sample, pred_sample_n)
       metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
       modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
+      #modRes[[res]] <- list("model"=train_result_sample)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     } else if (type  == "regression"){
       if (ft > 0){
@@ -166,6 +196,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                                      trControl=tcontrol)
       }
       train_result_sample$trainingData <- NULL
+      train_result_sample$finalModel$call <- NULL
       pred_sample_n <- data.frame(index = tsIndx,
                                   pred=predict(train_result_sample, testTransformed),
                                   obs=y[tsIndx],
@@ -174,6 +205,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       pred_sample <- rbind(pred_sample, pred_sample_n)
       metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
       modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
+      #modRes[[res]] <- list("model"=train_result_sample)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     }
   }

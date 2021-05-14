@@ -77,6 +77,7 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
       test<- t(assay(df)[fe[,i],])
       preProcValues <- preProcess(test, method = c("center", "scale"))
       test <- predict(preProcValues, test)
+      #test <- predict(data[[i]]$preprocess, test)
       if (problem == "regression"){
         temppredict <- predict(data[[i]]["model"], newdata = test)
         pred <- temppredict$model
@@ -109,3 +110,4 @@ if (is.null(drugname)){
   df <- generate_testing_df(dataset, mDataType, str_to_title(drugname))
   predictmodel(pSet, trainset, drugname, method, problem)
 }
+

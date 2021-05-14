@@ -110,7 +110,7 @@ plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_c
       L1000_data <- sapply(L1000, function(temp) temp$prediction %>% summarise(cor = list(cor(pred, obs))))
     }
     data <- data.frame(
-      name=c(rep("500",25), rep("100",25), rep("tm",25), rep("ntm",25), rep("ft",25), rep("L1000",25)),
+      name=c(rep("500",20), rep("100",20), rep("tm",20), rep("ntm",20), rep("ft",20), rep("L1000",20)),
       value=c(unlist(top500_data), unlist(top100_data), unlist(tm_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
@@ -151,12 +151,12 @@ plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_cc
       L1000_data <- sapply(L1000, function(temp) temp$stats$byClass["Balanced Accuracy"])
     }
     else if (metric == "AUC"){
-      tm_data <- sapply(tm, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
-      top500_data <- sapply(top500, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
-      top100_data <- sapply(top100, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
-      ntm_data <- sapply(ntm, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
-      ft_data <- sapply(ft, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
-      L1000_data <- sapply(L1000, function(temp) auc(ifelse(pred$obs == "sensitive",1,0),pred$prob$sensitive))
+      tm_data <- sapply(tm, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
+      top500_data <- sapply(top500, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
+      top100_data <- sapply(top100, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
+      ntm_data <- sapply(ntm, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
+      ft_data <- sapply(ft, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
+      L1000_data <- sapply(L1000, function(temp) auc(ifelse(temp$pred$obs == "sensitive",1,0),temp$pred$prob$sensitive))
       
     }
     data <- data.frame(
@@ -188,7 +188,7 @@ plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_cc
       L1000_data <- sapply(L1000, function(temp) cor(temp$pred, temp$original))
     }
     data <- data.frame(
-      name=c(rep("tm",25), rep("500", 25), rep("100",25), rep("ntm",25), rep("ft", 25), rep("L1000", 25)),
+      name=c(rep("tm",20), rep("500", 20), rep("100",20), rep("ntm",20), rep("ft", 20), rep("L1000", 20)),
       value=c(unlist(tm_data), unlist(top500_data), unlist(top100_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
