@@ -75,9 +75,9 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
     modRes <- list()
     for (i in names(fe[1,])){
       test<- t(assay(df)[fe[,i],])
-      preProcValues <- preProcess(test, method = c("center", "scale"))
-      test <- predict(preProcValues, test)
-      #test <- predict(data[[i]]$preprocess, test)
+      #preProcValues <- preProcess(test, method = c("center", "scale"))
+      #test <- predict(preProcValues, test)
+      test <- predict(data[[i]]$preprocess, test)
       if (problem == "regression"){
         temppredict <- predict(data[[i]]["model"], newdata = test)
         pred <- temppredict$model

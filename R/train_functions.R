@@ -120,10 +120,11 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
   {
     trIndx <- trainIndex[[res]]
     tsIndx <- setdiff(1:nrow(x), trIndx)
-
-    preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
-    trainTransformed <- predict(preProcValues, x[trIndx, ])
-    testTransformed <- predict(preProcValues, x[tsIndx, ])
+    trainTransformed <- x[trIndx, ]
+    testTransformed <- x[tsIndx, ]
+    #preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
+    #trainTransformed <- predict(preProcValues, x[trIndx, ])
+    #testTransformed <- predict(preProcValues, x[tsIndx, ])
     if (type == "class"){
       if (ft > 0){
         featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,ynum[trIndx])))
@@ -138,6 +139,9 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
         trainTransformed <- trainTransformed[, names(gene_vars)]
         testTransformed <- testTransformed[, names(gene_vars)]
       }
+      preProcValues <- preProcess(trainTransformed, method = c("center", "scale"))
+      trainTransformed <- predict(preProcValues, trainTransformed)
+      testTransformed <- predict(preProcValues, testTransformed)
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
@@ -181,6 +185,9 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
         trainTransformed <- trainTransformed[, names(gene_vars)]
         testTransformed <- testTransformed[, names(gene_vars)]
       }
+      preProcValues <- preProcess(trainTransformed, method = c("center", "scale"))
+      trainTransformed <- predict(preProcValues, trainTransformed)
+      testTransformed <- predict(preProcValues, testTransformed)
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
