@@ -40,7 +40,11 @@ L1000_gene_list <- read.delim("L1000_gene_list.txt")$Symbol
 genespath <- "./genes/"
 
 if (pSet == "CCLE"){
-  dataset <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
+  CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
+  ci <- cellInfo(CCLE)
+  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
+  CCLE <- subsetTo(CCLE,cells = ci2$cellid)
+  dataset <- CCLE
   mDataType <- "rna"
 } else if (pSet == "GDSC") {
   GDSC2 <- readRDS("../data/GDSC2.rds")

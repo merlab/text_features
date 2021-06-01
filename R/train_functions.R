@@ -90,7 +90,8 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                              trim = TRUE,
                              returnData = FALSE,
                              classProbs = TRUE,
-                             sampling = "up")
+                             sampling = "up",
+                             summaryFunction = twoClassSummary)
     ynum <- y$aac
     y <- y$class
     trainIndex <- createDataPartition(y, p = .8,
@@ -145,15 +146,15 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
                                      tuneGrid=tgrid,
+                                     metric = "ROC",
                                      trControl=tcontrol)
       } else if (method == "rf"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
                                      tuneGrid=tgrid,
                                      ntrees=100,
+                                     metric = "ROC",
                                      trControl=tcontrol)
       }
       train_result_sample$trainingData <- NULL
@@ -191,13 +192,13 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
+                                     metric="RMSE",
                                      tuneGrid=tgrid,
                                      trControl=tcontrol)
       } else if (method == "rf"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
+                                     metric="RMSE",
                                      tuneGrid=tgrid,
                                      ntrees=100,
                                      trControl=tcontrol)

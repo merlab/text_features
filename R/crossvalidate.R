@@ -29,7 +29,11 @@ print(sprintf("pSet: %s, method: %s, problem: %s", pSet, method, problem))
 genespath <- "./genes/"
 
 if (pSet == "CCLE"){
-  dataset <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
+  CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
+  ci <- cellInfo(CCLE)
+  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
+  CCLE <- subsetTo(CCLE,cells = ci2$cellid)
+  dataset <- CCLE
   mDataType <- "rna"
   trainset <- "GDSC"
   
