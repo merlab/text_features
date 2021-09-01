@@ -24,5 +24,5 @@ For each argument, refer to "Reference for valid arguments" table below, for all
 | pSet  | GDSC, CCLE  |
 | method  | glmnet, rf  |
 | problem | regression, class  |
-| metric | RMSE, COR  |
-| type | train, test  |
+| metric | Accuracy, BalancedAccuracy, AUC, COR  |
+| type | train, test, all  |
