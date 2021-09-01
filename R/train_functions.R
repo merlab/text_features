@@ -1,6 +1,6 @@
-source("./summarizeData.R")
-source("./computeInteractionMatrix.R")
-source("./mRMR.R")
+source("./helper/summarizeData.R")
+source("./helper/computeInteractionMatrix.R")
+source("./helper/mRMR.R")
 
 generate_df <- function(pSet, mDataType, drugname){
   #create df
