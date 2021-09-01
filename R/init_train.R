@@ -40,20 +40,18 @@ L1000_gene_list <- read.delim("L1000_gene_list.txt")$Symbol
 genespath <- "./genes/"
 
 if (pSet == "CCLE"){
-  CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
-  ci <- cellInfo(CCLE)
-  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
-  CCLE <- subsetTo(CCLE,cells = ci2$cellid)
-  dataset <- CCLE
+  dataset <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
   mDataType <- "rna"
 } else if (pSet == "GDSC") {
-  GDSC2 <- readRDS("../data/GDSC2.rds")
-  ci <- cellInfo(GDSC2)
-  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
-  GDSC2 <- subsetTo(GDSC2,cells = ci2$cellid)
-  dataset <- GDSC2
+  dataset <- readRDS("../data/GDSC2.rds")
   mDataType <- "Kallisto_0.46.1.rnaseq"
+} else if (pSet == "gCSI") {
+  dataset <- readRDS("../data/gCSI2.rds")
+  mDataType <- "Kallisto_0.46.1.rnaseq" 
 }
+ci <- cellInfo(dataset)
+ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
+dataset <- subsetTo(dataset,cells = ci2$cellid)
 
 if (is.null(drugname)) {
   files <- list.files(path=genespath, full.names=FALSE, recursive=FALSE)
@@ -61,54 +59,56 @@ if (is.null(drugname)) {
   files = list(drugname)
 }
 
+
+
 for (file in files){
   drugname <- file_path_sans_ext(file)
   print(drugname)
-  df <- generate_df(dataset, mDataType, str_to_title(drugname))
-  
-  print("text mining genes")
-  temp1 <- subset_by_feat(df, drugname, TRUE, cutoff_method = "fixed")
-  result1 <- trainmodel(temp1$X, temp1$Y, drugname, problem ,method)
-  saveRDS(result1$model, sprintf("../train_output/%s/%s/model/%s_%s_tm.rds", pSet,problem, drugname,method))
-  saveRDS(result1$output, sprintf("../train_output/%s/%s/output/%s_%s_tm.rds", pSet,problem,drugname,method))
-  tm <- ncol(temp1$X)
-  rm(result1, temp1)
-  
-  print("feature selection genes ft")
-  temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-  result5 <- trainmodel(temp5$X, temp5$Y, drugname, problem ,method, ft = tm)
-  saveRDS(result5$model, sprintf("../train_output/%s/%s/model/%s_%s_ft.rds", pSet,problem,drugname,method))
-  saveRDS(result5$output, sprintf("../train_output/%s/%s/output/%s_%s_ft.rds", pSet,problem,drugname,method))
-  rm(result5, temp5)
-  
-  print("top 500 genes")
-  temp2 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-  result2 <- trainmodel(temp2$X, temp2$Y, drugname, problem, method, var_count = 500)
-  saveRDS(result2$model, sprintf("../train_output/%s/%s/model/%s_%s_500.rds", pSet,problem,drugname,method))
-  saveRDS(result2$output, sprintf("../train_output/%s/%s/output/%s_%s_500.rds", pSet,problem,drugname,method))
-  rm(result2, temp2)
-  
-  print("top 100 genes")
-  temp3 <- subset_by_feat(df, drugname, FALSE,  cutoff_method = "fixed")
-  result3 <- trainmodel(temp3$X, temp3$Y, drugname, problem, method, var_count = 100)
-  saveRDS(result3$model, sprintf("../train_output/%s/%s/model/%s_%s_100.rds", pSet,problem,drugname,method))
-  saveRDS(result3$output, sprintf("../train_output/%s/%s/output/%s_%s_100.rds", pSet,problem,drugname,method))
-  rm(result3, temp3)
-  
-  print("not text mining")
-  temp4 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
-  result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem, method, var_count = tm)
-  saveRDS(result4$model, sprintf("../train_output/%s/%s/model/%s_%s_ntm.rds", pSet,problem,drugname,method))
-  saveRDS(result4$output, sprintf("../train_output/%s/%s/output/%s_%s_ntm.rds", pSet,problem,drugname,method))
-  rm(result4, temp4)
-  
-  print("L1000 genes")
-  temp6 <- subset_by_feat(df, drugname, cutoff_method = "fixed", L1000 = TRUE)
-  result6 <- trainmodel(temp6$X, temp6$Y, drugname, problem ,method)
-  saveRDS(result6$model, sprintf("../train_output/%s/%s/model/%s_%s_L1000.rds", pSet,problem,drugname,method))
-  saveRDS(result6$output, sprintf("../train_output/%s/%s/output/%s_%s_L1000.rds", pSet,problem,drugname,method))
-  rm(result6, temp6)
-  rm(df)
+  tryCatch( {
+    df <- generate_df(dataset, mDataType, str_to_title(drugname))
+
+    print("text mining genes 500")
+    temp1 <- subset_by_feat(df, drugname, TRUE, subset_size = 500, cutoff_method = "fixed")
+    result1 <- trainmodel(temp1$X, temp1$Y, drugname, problem ,method)
+    saveRDS(result1$model, sprintf("../train_output/%s/%s/model/%s_%s_tm500.rds", pSet,problem, drugname,method))
+    saveRDS(result1$output, sprintf("../train_output/%s/%s/output/%s_%s_tm500.rds", pSet,problem,drugname,method))
+    rm(result1, temp1)
+    
+    print("top 500 variance genes")
+    temp2 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
+    result2 <- trainmodel(temp2$X, temp2$Y, drugname, problem, method, var_count = 500)
+    saveRDS(result2$model, sprintf("../train_output/%s/%s/model/%s_%s_500.rds", pSet,problem,drugname,method))
+    saveRDS(result2$output, sprintf("../train_output/%s/%s/output/%s_%s_500.rds", pSet,problem,drugname,method))
+    rm(result2, temp2)
+
+    print("L1000 genes")
+    temp3 <- subset_by_feat(df, drugname, cutoff_method = "fixed", L1000 = TRUE)
+    result3 <- trainmodel(temp3$X, temp3$Y, drugname, problem ,method)
+    saveRDS(result3$model, sprintf("../train_output/%s/%s/model/%s_%s_L1000.rds", pSet,problem,drugname,method))
+    saveRDS(result3$output, sprintf("../train_output/%s/%s/output/%s_%s_L1000.rds", pSet,problem,drugname,method))
+    rm(result3, temp3)
+    
+    print("L1000-tm genes")
+    temp4 <- subset_by_feat(df, drugname, textmining = TRUE, cutoff_method = "fixed", L1000 = TRUE)
+    result4 <- trainmodel(temp4$X, temp4$Y, drugname, problem ,method)
+    saveRDS(result4$model, sprintf("../train_output/%s/%s/model/%s_%s_nL1000.rds", pSet,problem, drugname,method))
+    saveRDS(result4$output, sprintf("../train_output/%s/%s/output/%s_%s_nL1000.rds", pSet,problem,drugname,method))
+    rm(result4, temp4)
+
+    print("feature selection genes ft")
+    temp5 <- subset_by_feat(df, drugname, FALSE, cutoff_method = "fixed")
+    result5 <- trainmodel(temp5$X, temp5$Y, drugname, problem ,method, ft = 500)
+    saveRDS(result5$model, sprintf("../train_output/%s/%s/model/%s_%s_ft.rds", pSet,problem,drugname,method))
+    saveRDS(result5$output, sprintf("../train_output/%s/%s/output/%s_%s_ft.rds", pSet,problem,drugname,method))
+    rm(result5, temp5)
+
+    rm(df)
+  },
+    error = function(e) { 
+      print(e)
+      print("------------------------------------------------------")
+    }
+  )
 }
 
 stopCluster(cl)

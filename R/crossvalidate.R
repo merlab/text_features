@@ -29,23 +29,22 @@ print(sprintf("pSet: %s, method: %s, problem: %s", pSet, method, problem))
 genespath <- "./genes/"
 
 if (pSet == "CCLE"){
-  CCLE <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
-  ci <- cellInfo(CCLE)
-  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
-  CCLE <- subsetTo(CCLE,cells = ci2$cellid)
-  dataset <- CCLE
+  dataset <- readRDS("../data/CCLE_CTRPv2_solidTumor.rds")
   mDataType <- "rna"
   trainset <- "GDSC"
-  
 } else if (pSet == "GDSC") {
-  GDSC2 <- readRDS("../data/GDSC2.rds")
-  ci <- cellInfo(GDSC2)
-  ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
-  GDSC2 <- subsetTo(GDSC2,cells = ci2$cellid)
-  dataset <- GDSC2
+  dataset <- readRDS("../data/GDSC2.rds")
   mDataType <- "Kallisto_0.46.1.rnaseq"
   trainset <- "CCLE"
+} else if (pSet == "gCSI") {
+  dataset <- readRDS("../data/gCSI2.rds")
+  mDataType <- "Kallisto_0.46.1.rnaseq" 
+  trainset <- "CCLE"
 }
+ci <- cellInfo(dataset)
+ci2 <- ci[!ci$tissueid %in% c("Lymphoid", "Myeloid"), ]
+dataset <- subsetTo(dataset,cells = ci2$cellid)
+
 
 generate_testing_df <- function(pSet, mDataType, drug){
   #create df
@@ -60,7 +59,8 @@ generate_testing_df <- function(pSet, mDataType, drug){
 }
 
 predictmodel <- function(pSet, trainset, drugname, method, problem){
-  models <- list("tm", "500", "100", "ntm", "ft", "L1000")
+  #models <- list("tm", "500", "100", "ntm", "ft", "L1000")
+  models <- list("nL1000")
   for (model in models){
     print(model)
     data <- readRDS(sprintf("../train_output/%s/%s/model/%s_%s_%s.rds",trainset, problem, drugname, method,model))
@@ -106,9 +106,14 @@ if (is.null(drugname)){
   for (file in files){
     drugname <- stri_sub(file, 1, -5)
     print(drugname)
-    df <- generate_testing_df(dataset, mDataType, str_to_title(drugname))
-    print("predicting")
-    temp <- predictmodel(pSet, trainset, drugname, method, problem)
+    tryCatch({
+      df <- generate_testing_df(gCSI, mDataType, str_to_title(drugname))
+      print("predicting")
+      temp <- predictmodel(pSet, trainset, drugname, method, problem)}, 
+      error = function(e) { 
+        print(e)
+      }
+    )
   }
 } else {
   df <- generate_testing_df(dataset, mDataType, str_to_title(drugname))
