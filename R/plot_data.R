@@ -122,8 +122,8 @@ plotbw_train <- function(pSet, drugname, metric, method, problem, sample_count_c
       L1000_data <- sapply(L1000, function(temp) temp$prediction %>% summarise(cor = list(cor(pred, obs))))
     }
     data <- data.frame(
-      name=c(rep("500",20), rep("100",20), rep("tm",20), rep("ntm",20), rep("ft",20), rep("L1000",20)),
-      value=c(unlist(top500_data), unlist(top100_data), unlist(tm_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
+      name=c(rep("tm",length(tm_data)), rep("500", length(top500_data)), rep("100",length(top100_data)), rep("ntm",length(ntm_data)), rep("ft", length(ft_data)), rep("L1000", length(L1000_data))),
+      value=c(unlist(tm_data), unlist(top500_data), unlist(top100_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
     num_samples_ccle <- sample_count_ccle[sample_count_ccle$name == drugname,]$count
@@ -203,7 +203,7 @@ plotbw_test <- function(pSet, drugname, metric, method, problem, sample_count_cc
       L1000_data <- sapply(L1000, function(temp) cor(temp$pred, temp$original))
     }
     data <- data.frame(
-      name=c(rep("tm",20), rep("500", 20), rep("100",20), rep("ntm",20), rep("ft", 20), rep("L1000", 20)),
+      name=c(rep("tm",length(tm_data)), rep("500", length(top500_data)), rep("100",length(top100_data)), rep("ntm",length(ntm_data)), rep("ft", length(ft_data)), rep("L1000", length(L1000_data))),
       value=c(unlist(tm_data), unlist(top500_data), unlist(top100_data), unlist(ntm_data), unlist(ft_data), unlist(L1000_data))
     )
     num_samples_gdsc <- sample_count_gdsc[sample_count_gdsc$name == drugname,]$count
@@ -283,8 +283,23 @@ for (file in files){
     plot<- plotbw_train(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc)
   } else if (type == "test"){
     plot<- plotbw_test(pSet, drugname, metric, method, problem, sample_count_ccle, sample_count_gdsc)
+  } else if (type == "all"){
+    A_train <- plotbw_train("CCLE", drugname, "Accuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    A_test <- plotbw_test("GDSC", drugname, "Accuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    A_bar <- plot_bar("GDSC", drugname, "Accuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    BA_train <- plotbw_train("CCLE", drugname, "BalancedAccuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    BA_test <- plotbw_test("GDSC", drugname, "BalancedAccuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    BA_bar <- plot_bar("GDSC", drugname, "BalancedAccuracy", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    AUC_train <- plotbw_train("CCLE", drugname, "AUC", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    AUC_test <- plotbw_test("GDSC", drugname, "AUC", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    AUC_bar <- plot_bar("GDSC", drugname, "AUC", "glmnet", problem, sample_count_ccle, sample_count_gdsc)
+    #rf_train <- plotbw_train("CCLE", drugname, metric, "rf", problem, sample_count_ccle, sample_count_gdsc)
+    #rf_test <- plotbw_test("GDSC", drugname, metric, "rf", problem, sample_count_ccle, sample_count_gdsc)
+    #rf_bar <- plot_bar("GDSC", drugname, metric, "rf", problem, sample_count_ccle, sample_count_gdsc)
+    #plot <- ggarrange(glmnet_train, glmnet_test, glmnet_bar, rf_train, rf_test, rf_bar, ncol = 3, nrow = 2)
+    plot <- ggarrange(A_train, A_test, A_bar, BA_train, BA_test, BA_bar, AUC_train, AUC_test, AUC_bar, ncol = 3, nrow = 3)
   }
-  pdf(sprintf("../result/%s/%s/%s/%s_%s_%s.pdf", type, pSet, problem, drugname, method, metric))
+  pdf(sprintf("../result/%s/%s/%s/%s_%s_%s.pdf", type, pSet, problem, drugname, method, metric), width=16, height=16)
   print(plot)
   dev.off()
 }

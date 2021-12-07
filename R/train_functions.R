@@ -1,6 +1,6 @@
-source("./summarizeData.R")
-source("./computeInteractionMatrix.R")
-source("./mRMR.R")
+source("./helper/summarizeData.R")
+source("./helper/computeInteractionMatrix.R")
+source("./helper/mRMR.R")
 
 generate_df <- function(pSet, mDataType, drugname){
   #create df
@@ -27,13 +27,21 @@ generate_df <- function(pSet, mDataType, drugname){
   return(df)
 }
 
-subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE, var_count = 0){
+subset_by_feat <- function(df, drug, textmining = NULL, subset_size = 0, cutoff_method = "waterfall", L1000 = FALSE, var_count = 0){
   minedgenes <- readRDS(sprintf("./genes/%s.rds",drug))
   #select mined genes
-  if (L1000 == TRUE){
+  if (L1000 == TRUE && textmining == TRUE){
+    genes = L1000_gene_list[!(L1000_gene_list %in% minedgenes$Symbol)]
+    dfout = df[rowData(df)$gene_name %in% genes, ]
+  } else if (L1000 == TRUE){
     dfout = df[rowData(df)$gene_name %in% L1000_gene_list, ]
   } else if (textmining == TRUE){
-    dfout = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
+    #dfout = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
+    dfout <- df[match(minedgenes$Symbol, rowData(df)$gene_name),]
+    dfout <- dfout[!is.na(rownames(dfout)),]
+    if (subset_size != 0 && dim(dfout)[1] < subset_size){
+      subset_size <- 0
+    }
   } else if (textmining == FALSE) {
     dfout= df[!(rowData(df)$gene_name %in% minedgenes$Symbol), ]
   }
@@ -69,6 +77,17 @@ subset_by_feat <- function(df, drug, textmining = NULL , subset_size = 0, cutoff
   return(output)
 }
 
+## x is the gene expression vector	
+## y is the sensitive resistant vector	
+## remove all values taht have NA	
+get_t_stat <- function(x, y)	
+{	
+  s <- x[y=='sensitive']	
+  r <- x[y=='resistant']	
+  v <- t.test(s,r)	
+  return(v$statistic[['t']])	
+}
+
 #second function trains model based on x and y
 trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
   set.seed(1)
@@ -90,7 +109,8 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
                              trim = TRUE,
                              returnData = FALSE,
                              classProbs = TRUE,
-                             sampling = "up")
+                             sampling = "up",
+                             summaryFunction = twoClassSummary)
     ynum <- y$aac
     y <- y$class
     trainIndex <- createDataPartition(y, p = .8,
@@ -126,8 +146,9 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
     #trainTransformed <- predict(preProcValues, x[trIndx, ])
     #testTransformed <- predict(preProcValues, x[tsIndx, ])
     if (type == "class"){
-      if (ft > 0){
-        featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,ynum[trIndx])))
+      if (ft > 0 && dim(trainTransformed)[2] > ft){
+        #featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,ynum[trIndx])))
+        featcor <- abs(apply(trainTransformed, 2, function(x) get_t_stat(x, y[trIndx])))
         featcor <- sort(featcor, decreasing = TRUE)
         featcor <- featcor[1:ft]
         trainTransformed <- trainTransformed[, names(featcor)]
@@ -145,15 +166,15 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
                                      tuneGrid=tgrid,
+                                     metric = "ROC",
                                      trControl=tcontrol)
       } else if (method == "rf"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
                                      tuneGrid=tgrid,
                                      ntrees=100,
+                                     metric = "ROC",
                                      trControl=tcontrol)
       }
       train_result_sample$trainingData <- NULL
@@ -172,7 +193,7 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       #modRes[[res]] <- list("model"=train_result_sample)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     } else if (type  == "regression"){
-      if (ft > 0){
+      if (ft > 0 && dim(trainTransformed)[2] > ft){
         featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,y[trIndx])))
         featcor <- sort(featcor, decreasing = TRUE)
         featcor <- featcor[1:ft]
@@ -191,13 +212,13 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       if (method == "glmnet"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
+                                     metric="RMSE",
                                      tuneGrid=tgrid,
                                      trControl=tcontrol)
       } else if (method == "rf"){
         train_result_sample <- train(x=trainTransformed, y=y[trIndx],
                                      method=sprintf("%s", method),
-                                     maximize = FALSE,
+                                     metric="RMSE",
                                      tuneGrid=tgrid,
                                      ntrees=100,
                                      trControl=tcontrol)
