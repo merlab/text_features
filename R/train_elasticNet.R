@@ -3,7 +3,6 @@ library(caret)
 #d1 <- readRDS("../data/Bortezomib_100.rds")
 
 d5 <- readRDS("~/Downloads/Cediranib_500.rds")
-
 x = d5$X; y=d5$Y$aac
 
 method = "glmnet"
