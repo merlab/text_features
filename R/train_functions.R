@@ -36,7 +36,6 @@ subset_by_feat <- function(df, drug, textmining = NULL, subset_size = 0, cutoff_
   } else if (L1000 == TRUE){
     dfout = df[rowData(df)$gene_name %in% L1000_gene_list, ]
   } else if (textmining == TRUE){
-    #dfout = df[rowData(df)$gene_name %in% minedgenes$Symbol, ]
     dfout <- df[match(minedgenes$Symbol, rowData(df)$gene_name),]
     dfout <- dfout[!is.na(rownames(dfout)),]
     if (subset_size != 0 && dim(dfout)[1] < subset_size){
@@ -89,7 +88,7 @@ get_t_stat <- function(x, y)
 }
 
 #second function trains model based on x and y
-trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
+trainmodel <- function(x,y,drugname,type, method, ft = -100, var_count = -100){
   set.seed(1)
   if(method == "glmnet"){
     tgrid <- expand.grid(alpha=seq(0.0, 1, 0.1),
@@ -142,12 +141,11 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
     tsIndx <- setdiff(1:nrow(x), trIndx)
     trainTransformed <- x[trIndx, ]
     testTransformed <- x[tsIndx, ]
-    #preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
-    #trainTransformed <- predict(preProcValues, x[trIndx, ])
-    #testTransformed <- predict(preProcValues, x[tsIndx, ])
+    preProcValues <- preProcess(x[trIndx, ], method = c("center", "scale"))
+    trainTransformed <- predict(preProcValues, x[trIndx, ])
+    testTransformed <- predict(preProcValues, x[tsIndx, ])
     if (type == "class"){
       if (ft > 0 && dim(trainTransformed)[2] > ft){
-        #featcor <- abs(apply(trainTransformed, 2, function(i) cor(i,ynum[trIndx])))
         featcor <- abs(apply(trainTransformed, 2, function(x) get_t_stat(x, y[trIndx])))
         featcor <- sort(featcor, decreasing = TRUE)
         featcor <- featcor[1:ft]
@@ -190,7 +188,6 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       pred_sample <- rbind(pred_sample, pred_sample_n)
       metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
       modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
-      #modRes[[res]] <- list("model"=train_result_sample)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     } else if (type  == "regression"){
       if (ft > 0 && dim(trainTransformed)[2] > ft){
@@ -233,7 +230,6 @@ trainmodel <- function(x,y,name,type, method, ft = -100, var_count = -100){
       pred_sample <- rbind(pred_sample, pred_sample_n)
       metadata <- list("samples" = nrow(x), "features" = ncol(x), "label" = table(y))
       modRes[[res]] <- list("model"=train_result_sample, "preprocess" = preProcValues)
-      #modRes[[res]] <- list("model"=train_result_sample)
       output[[res]] <- list("prediction" = pred_sample, "stats" = per, "metadata" = metadata)
     }
   }
