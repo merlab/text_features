@@ -6,7 +6,7 @@ library(data.table)
 library(stringi)
 library(tools)
 library(tidyverse)
-source("./summarizeData.R")
+source("./helper/summarizeData.R")
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -38,7 +38,7 @@ if (pSet == "CCLE"){
   trainset <- "CCLE"
 } else if (pSet == "gCSI") {
   dataset <- readRDS("../data/gCSI2.rds")
-  mDataType <- "Kallisto_0.46.1.rnaseq" 
+  mDataType <- "Kallisto_0.46.1.rnaseq"
   trainset <- "CCLE"
 }
 ci <- cellInfo(dataset)
@@ -50,11 +50,11 @@ generate_testing_df <- function(pSet, mDataType, drug){
   #create df
   df = summarizeData(pSet=pSet, mDataType = mDataType, drug = drug, sensitivity.measure="aac_recomputed")
   df = df[, !is.na(colData(df)$aac_recomputed)]
-  
+
   #remove samples with NA value
   NAsamples <- apply(assay(df), 2, function(i) any(is.na(i)))
   df <- df[, !NAsamples]
-  
+
   return(df)
 }
 
@@ -102,15 +102,15 @@ predictmodel <- function(pSet, trainset, drugname, method, problem){
 
 if (is.null(drugname)){
   files <- list.files(path=genespath, full.names=FALSE, recursive=FALSE)
-  
+
   for (file in files){
     drugname <- stri_sub(file, 1, -5)
     print(drugname)
     tryCatch({
       df <- generate_testing_df(gCSI, mDataType, str_to_title(drugname))
       print("predicting")
-      temp <- predictmodel(pSet, trainset, drugname, method, problem)}, 
-      error = function(e) { 
+      temp <- predictmodel(pSet, trainset, drugname, method, problem)},
+      error = function(e) {
         print(e)
       }
     )
