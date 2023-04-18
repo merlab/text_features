@@ -2,14 +2,14 @@
 
 ## Abstract
 
-Motivation: Predicting anticancer treatment response from baseline genomic data is a
+**Motivation:** Predicting anticancer treatment response from baseline genomic data is a
 critical obstacle in personalized medicine. Machine learning methods are
 commonly used for predicting drug response from gene expression data. In the
 process of constructing these machine learning models, one of the most
 significant challenges is identifying appropriate features among a massive
 number of genes.
 
-Results: In this study, we utilize features (genes) extracted using the text-mining of
+**Results:** In this study, we utilize features (genes) extracted using the text-mining of
 scientific literatures. Using two independent cancer pharmacogenomic datasets,
 we demonstrate that text-mining-based features outperform traditional feature
 selection techniques in machine learning tasks. In addition, our analysis
