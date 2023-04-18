@@ -1,4 +1,26 @@
+# Text-Mining Based Feature Selection for Anticancer Drug Response Prediction 
+
+## Abstract
+
+Motivation: Predicting anticancer treatment response from baseline genomic data is a
+critical obstacle in personalized medicine. Machine learning methods are
+commonly used for predicting drug response from gene expression data. In the
+process of constructing these machine learning models, one of the most
+significant challenges is identifying appropriate features among a massive
+number of genes.
+
+Results: In this study, we utilize features (genes) extracted using the text-mining of
+scientific literatures. Using two independent cancer pharmacogenomic datasets,
+we demonstrate that text-mining-based features outperform traditional feature
+selection techniques in machine learning tasks. In addition, our analysis
+reveals that text-mining feature-based machine learning models trained on in
+vitro data also perform well when predicting the response of in vivo cancer
+models. Our results demonstrate that text-mining based feature selection is an
+easy to implement approach that is suitable for building machine learning
+models for anticancer drug response prediction.
+
 ## Descriptions of some scripts in /R
+
 For each argument, refer to "Reference for valid arguments" table below, for all supported inputs.  
 
 ### /R/init_train.R  
@@ -26,3 +48,7 @@ For each argument, refer to "Reference for valid arguments" table below, for all
 | problem | regression, class  |
 | metric | Accuracy, BalancedAccuracy, AUC, COR  |
 | type | train, test, all  |
+
+## Contact:
+
+Arvind Mer: [Email](mailto:amer@uottawa.ca)
