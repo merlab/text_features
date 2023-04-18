@@ -19,7 +19,7 @@ prd$status <- 1
 
 fit <- survfit(Surv(time, status) ~ class, data = prd)
 
-pdf("./result/Fig4A_KM_plot.pdf", width=3.25, height=5)
+pdf("./result/Fig-3B_PDX_plot.pdf", width=3.25, height=5)
 ggsurvplot(fit, pval = TRUE, conf.int = TRUE,
            risk.table = TRUE, risk.table.col = "strata",
            ggtheme = theme_classic(),

@@ -108,7 +108,7 @@ gene_cols <- rep("#57635F", nrow(mat))
 cols <- c(drug_cols, gene_cols)
 
 # open pdf
-pdf("./result/chorddiag.pdf", width = 8, height = 8)
+pdf("./result/Fig-1B_chorddiag.pdf", width = 8, height = 8)
 
 par(mar = c(0.5, 3, 1, 0), xpd = NA)
 

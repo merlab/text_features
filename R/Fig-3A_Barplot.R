@@ -12,6 +12,6 @@ p <- p + theme(legend.position="none", axis.title.x = element_text(size = 16), a
                axis.line.y = element_line(color="black")) +
   xlab("Feature Selection Method") + ylab("Pearson Correlation") +scale_y_continuous(expand = c(0, 0))
 p
-pdf(sprintf("./result/Fig4B_Barplot.pdf"), width=6.5, height=5)
+pdf(sprintf("./result/Fig3A_Barplot.pdf"), width=6.5, height=5)
 print(p)
 dev.off()
