@@ -4,8 +4,8 @@ source("./helper/mRMR.R")
 
 generate_df <- function(pSet, mDataType, drugname){
   #create df
-  df = summarizeData(pSet=pSet, mDataType = mDataType, drug = drugname, sensitivity.measure="aac_recomputed")
-  df = df[, !is.na(colData(df)$aac_recomputed)]
+  df <- summarizeData(pSet=pSet, mDataType = mDataType, drug = drugname, sensitivity.measure="aac_recomputed")
+  df <- df[, !is.na(colData(df)$aac_recomputed)]
 
   #remove samples with NA value
   NAsamples <- apply(assay(df), 2, function(i) any(is.na(i)))
