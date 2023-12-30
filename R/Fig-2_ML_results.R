@@ -66,21 +66,25 @@ create_plot <- function(df, title=NA)
 ##--------------------------------------------------------------
 ##---- Random-forest training and test plot --------------------
 trRF <- readRDS('result/train_test/train_RandomForest_Reg.rds')
+write.csv(trRF, "result/train_test/train_RandomForest_Reg.csv")
 pltTRRF <- create_plot(trRF)
 print(pltTRRF+ggtitle("Random Forest training"))
 
 tsRF <- readRDS('result/train_test/test_RandomForest_Reg.rds')
+write.csv(tsRF, "result/train_test/test_RandomForest_Reg.csv")
 pltTSRF <- create_plot(tsRF)
 print(pltTSRF+ggtitle("Random Forest test"))
 
 ##------------------------------------------------------------
 ##---- Elastic-Net training and test plot --------------------
 trEN <- readRDS('result/train_test/train_ElasticNet_Reg.rds')
+write.csv(trEN, "result/train_test/train_ElasticNet_Reg.csv")
 pltTREN <- create_plot(trEN)
 print(pltTREN+ggtitle("Elastic-Net training"))
 
 
 tsEN <- readRDS('result/train_test/test_ElasticNet_Reg.rds')
+write.csv(tsEN, "result/train_test/test_ElasticNet_Reg.csv")
 pltTSEN <- create_plot(tsEN)
 print(pltTSEN+ggtitle("Elastic-Net test"))
 

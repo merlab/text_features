@@ -62,7 +62,7 @@ mat$from <- NULL
 
 # filter the drugs by the drugs in the approved stat
 if (lim_drug_bank == TRUE) {
-    filter <- read_xlsx("./result/Supplementary_Data_1_drug_bank_approval_stat.xlsx")
+    filter <- read_xlsx("~/text_features_all/text_features/result/Supplementary_Data_File-1_txtMiningGeneList.xlsx")
     filter <- filter$drug[filter$approved == TRUE]
     mat <- mat[rownames(mat) %in% filter, ]
 }
@@ -108,7 +108,7 @@ gene_cols <- rep("#57635F", nrow(mat))
 cols <- c(drug_cols, gene_cols)
 
 # open pdf
-pdf("./result/Fig-1B_chorddiag.pdf", width = 8, height = 8)
+#pdf("./result/Fig-1B_chorddiag.pdf", width = 8, height = 8)
 
 par(mar = c(0.5, 3, 1, 0), xpd = NA)
 
@@ -156,5 +156,5 @@ circos.trackPlotRegion(track.index = 2, panel.fun = function(x, y) {
 }, bg.border = NA)
 
 circos.clear()
-dev.off()
+#dev.off()
 print("done")
