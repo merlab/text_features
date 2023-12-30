@@ -134,7 +134,7 @@ tsEN <- tsEN[, c("drug", "geneFilterMethod", "pearsonCor")]
 colnames(tsEN) <- c("drug", "Type", "value")
 pltTSEN <- create_plot(tsEN)
 ## ------------------------
-pdf("result/az_Fig-2_ML_results.pdf", width = 8.3, height = 8.0)
+pdf("result/Fig-2_ML_results.pdf", width = 8.3, height = 8.0)
 print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
   labels = c("A", "B", "C", "D"),
   ncol = 2, nrow = 2
