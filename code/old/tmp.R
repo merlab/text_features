@@ -21,13 +21,25 @@ f <- tolower(gsub("\\.rds", "", f))
 
 
 drugs <- tolower(removeCombTherapies(df$drugName))
-
-common_drugs <- intersect(f, drugs)
-# stop()
 df <- df[df$drugName %in% drugs, ]
+
+# common_drugs <- intersect(f, drugs)
+# stop()
 min(df$n_common_cells[df$drugName %in% f])
 min(df$n_cells_CCLE[df$drugName %in% f])
 min(df$n_cells_GDSE[df$drugName %in% f])
-table(df$n_cells_CCLE > 100) # & df$n_cells_GDSE > 100)
+# table(df$n_cells_CCLE > 100) # & df$n_cells_GDSE > 100)
 # table(df$n_cells_GDSE > 250)
 # table(df$n_common_cells > 250)
+fda <- read.csv("./data/FDA-approved-drug-list.csv")
+drugNames <- tolower(unique(c(fda$Generic.Name, fda$Brand.Name)))
+
+#
+df$isFDAapproved <- sapply(df$drugName, function(x) {
+  return(any(grepl(x, drugNames)))
+})
+table(df$isFDAapproved & df$n_cells_GDSE > 0)
+table(df$isFDAapproved & df$n_cells_CCLE > 0)
+# grep(df$drugName[1], drugNames)
+# table(tolower(df$drugName) %in% drugNames & df$n_cells_CCLE > 0)
+# table(tolower(df$drugName) %in% drugNames & df$n_cells_GDSE > 0)

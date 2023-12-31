@@ -102,25 +102,37 @@ removeCombTherapies <- function(v) {
   v <- v[!grepl("-leu-", v)]
   return(v)
 }
-df <- read_xlsx("./result/common_cell_lines_per_drug.xlsx")
-ccledrugs <- df$drugName[df$n_cells_CCLE > 100]
-gdsedrugs <- df$drugName[df$n_cells_GDSE > 0]
+# df <- read_xlsx("./result/common_cell_lines_per_drug.xlsx")
+# ccledrugs <- df$drugName[df$n_cells_CCLE > 100]
+# gdsedrugs <- df$drugName[df$n_cells_GDSE > 0]
+#
+# ccledrugs <- tolower(removeCombTherapies(ccledrugs))
+# gdsedrugs <- tolower(removeCombTherapies(gdsedrugs))
 
-ccledrugs <- tolower(removeCombTherapies(ccledrugs))
-gdsedrugs <- tolower(removeCombTherapies(gdsedrugs))
+# txtMineDrugs <- list.files("./data/drug_text-features/")
+# txtMineDrugs <- tolower(gsub("\\.rds", "", txtMineDrugs))
+# common_drugs <- intersect(ccledrugs, gdsedrugs)
+# excluded_drugs <- common_drugs[!common_drugs %in% txtMineDrugs]
+# ccledrugs <- ccledrugs[!ccledrugs %in% excluded_drugs]
+# gdsedrugs <- gdsedrugs[!gdsedrugs %in% excluded_drugs]
 
+# fda <- read.csv("./data/FDA-approved-drug-list.csv")
+# FDAdrugNames <- tolower(unique(c(fda$Generic.Name, fda$Brand.Name)))
+#
+# v <- sapply(ccledrugs, function(x) {
+#   return(any(grepl(x, FDAdrugNames)))
+# })
+# ccledrugs <- ccledrugs[v]
+# v <- sapply(gdsedrugs, function(x) {
+#   return(any(grepl(x, FDAdrugNames)))
+# })
+# gdsedrugs <- gdsedrugs[v]
 
-
-txtMineDrugs <- list.files("./data/drug_text-features/")
-txtMineDrugs <- tolower(gsub("\\.rds", "", txtMineDrugs))
-common_drugs <- intersect(ccledrugs, gdsedrugs)
-excluded_drugs <- common_drugs[!common_drugs %in% txtMineDrugs]
-txtMineDrugs[!txtMineDrugs %in% common_drugs]
-ccledrugs <- ccledrugs[!ccledrugs %in% excluded_drugs]
-gdsedrugs <- gdsedrugs[!gdsedrugs %in% excluded_drugs]
-
-
-drugs <- list("GDSE" = gdsedrugs, "CCLE" = ccledrugs)
+# drugs <- list("GDSE" = gdsedrugs, "CCLE" = ccledrugs)
+drugs <- list(
+  "GDSE" = c(paste(rep("A", 38), seq_len(38))),
+  "CCLE" = c(paste(rep("A", 38), seq_len(38)), paste(rep("B", 24), seq_len(24)))
+)
 cells <- list("GDSE" = gdsecells, "CCLE" = cclecells)
 pdf("./result/fig-1_venn.pdf", height = 5, width = 10)
 venn1 <- createVennDiagram(cells)
