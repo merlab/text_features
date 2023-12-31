@@ -11,14 +11,16 @@ library(ggpubr)
 # source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 source("./code/geom_flat_violin.R")
 
+size <- 12
 raincloud_theme <- theme(
   text = element_text(size = 10),
-  axis.title.x = element_text(size = 16),
-  axis.title.y = element_text(size = 16),
-  axis.text = element_text(size = 14),
-  axis.text.x = element_text(angle = 45, vjust = 0.5, color = "black"),
-  legend.title = element_text(size = 16),
-  legend.text = element_text(size = 16),
+  axis.title.x = element_text(size = size),
+  axis.title.y = element_text(size = size),
+  axis.text = element_text(size = size),
+  # axis.text.x = element_text(angle = 45, vjust = 0.95, hjust = 1, color = "black"),
+  axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, color = "black", size = 10),
+  legend.title = element_text(size = size),
+  legend.text = element_text(size = size),
   legend.position = "right",
   plot.title = element_text(lineheight = .8, face = "bold", size = 16),
   panel.border = element_blank(),
@@ -35,7 +37,7 @@ create_plot <- function(dft, title = NA) {
   dft <- as.data.frame(dft)
   #   fetMeth <- c("var-100", "var-500", "L1000-tm", "L1000", "cor-500", "text-mining")
   fetMeth <- c(
-    "var-500", "var-100", "L1000", "L1000-tm", "cor-500",
+    "var-100", "var-500", "L1000", "L1000-tm", "cor-500",
     "RFE", "MRMR", "GA",
     "text-mining"
   )
@@ -134,10 +136,24 @@ tsEN <- tsEN[, c("drug", "geneFilterMethod", "pearsonCor")]
 colnames(tsEN) <- c("drug", "Type", "value")
 pltTSEN <- create_plot(tsEN)
 ## ------------------------
-pdf("result/Fig-2_ML_results.pdf", width = 8.3, height = 8.0)
+# pdf("result/Fig-2_ML_results.pdf", width = 8.3 * 1.2, height = 8.0)
+# pdf("result/Fig-2_ML_results.pdf", width = 8.3 * 1.5/ 2, height = 8.0 * 2)
+pdf("result/Fig-2_ML_results.pdf", width = 8.5, height = 13)
 print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
-  labels = c("A", "B", "C", "D"),
-  ncol = 2, nrow = 2
+  # labels = c("A", "B", "C", "D"),
+  # ncol = 2, nrow = 2
+  ncol = 1, nrow = 4
 ))
+dev.off()
+## ------------------------------------------------------------
+## ---- Elastic-Net training and test plot --------------------
+dnn <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "glmnet_train")
+dnn <- dnn[, c("drug", "geneFilterMethod", "pearsonCor")]
+colnames(dnn) <- c("drug", "Type", "value")
+pltDNN <- create_plot(dnn)
+## ------------------------------------------------------------
+
+pdf("result/Fig-3_DNN_results.pdf", width = 8.3 * 1.5 / 2, height = 8.0 / 2)
+plot(pltDNN)
 dev.off()
 print("done")
