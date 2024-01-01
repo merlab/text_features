@@ -6,3 +6,6 @@
 code/.Rhistory
 data/erlotinib_CCLE_PDXE.rds
 data/erlotinib_CCLE-CTRPv2_model_TextMining.rds
+result/Supplementary-data-2-performance-indexes.xlsx
+result/textMining_ORA_C2.xlsx
+result/textMining_ORA_GO.xlsx
