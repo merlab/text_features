@@ -3,6 +3,7 @@
 library(readxl)
 library(ggplot2)
 library(ggpubr)
+library(writexl)
 # library(gridExtra)
 # library(readr); library(tidyr)
 # library(tools); library(Hmisc) ; library(plyr); library(RColorBrewer)
@@ -41,6 +42,8 @@ create_plot <- function(dft, title = NA) {
     "RFE", "MRMR", "GA",
     "text-mining"
   )
+  keep <- fetMeth %in% dft$Type
+  fetMeth <- fetMeth[keep]
 
   dft$Type <- factor(dft$Type, levels = fetMeth)
 
@@ -57,6 +60,7 @@ create_plot <- function(dft, title = NA) {
     "#B09C85FF", "#91D1C2FF", "#4DBBD5FF", "#3C5488FF", "#00A087FF",
     "#85469d", "#bf4aa5", "#446e35", "#DC0000FF"
   )
+  cl <- cl[keep]
   names(cl) <- fetMeth
 
   my_comparisons <- lapply(
@@ -114,26 +118,29 @@ create_plot <- function(dft, title = NA) {
 ## --------------------------------------------------------------
 ## ---- Random-forest training and test plot --------------------
 
-trRF <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "rf_train")
-trRF <- trRF[, c("drug", "geneFilterMethod", "pearsonCor")]
-colnames(trRF) <- c("drug", "Type", "value")
+# f <- "./result/mlModelMetrics.xlsx"
+f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+formatXLSX <- function(x) {
+  x <- x[, c("drug", "feature selection method", "pearsonCor")]
+  colnames(x) <- c("drug", "Type", "value")
+  return(x)
+}
+trRF <- read_xlsx(f, sheet = "RandomForest perf metrics-train")
+trRF <- formatXLSX(trRF)
 pltTRRF <- create_plot(trRF)
 ## ------------------------------------------------------------
-tsRF <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "rf_test")
-tsRF <- tsRF[, c("drug", "geneFilterMethod", "pearsonCor")]
-colnames(tsRF) <- c("drug", "Type", "value")
+tsRF <- read_xlsx(f, sheet = "RandomForest perf metrics-test")
+tsRF <- formatXLSX(tsRF)
 pltTSRF <- create_plot(tsRF)
 ## ------------------------------------------------------------
 ## ---- Elastic-Net training and test plot --------------------
-trEN <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "glmnet_train")
-trEN <- trEN[, c("drug", "geneFilterMethod", "pearsonCor")]
-colnames(trEN) <- c("drug", "Type", "value")
+trEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-train")
+trEN <- formatXLSX(trEN)
 pltTREN <- create_plot(trEN)
 ## ------------------------------------------------------------
 
-tsEN <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "glmnet_test")
-tsEN <- tsEN[, c("drug", "geneFilterMethod", "pearsonCor")]
-colnames(tsEN) <- c("drug", "Type", "value")
+tsEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-test")
+tsEN <- formatXLSX(tsEN)
 pltTSEN <- create_plot(tsEN)
 ## ------------------------
 # pdf("result/Fig-2_ML_results.pdf", width = 8.3 * 1.2, height = 8.0)
@@ -147,9 +154,8 @@ print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
 dev.off()
 ## ------------------------------------------------------------
 ## ---- Elastic-Net training and test plot --------------------
-dnn <- read_xlsx("./result/mlModelMetrics.xlsx", sheet = "glmnet_train")
-dnn <- dnn[, c("drug", "geneFilterMethod", "pearsonCor")]
-colnames(dnn) <- c("drug", "Type", "value")
+dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
+dnn <- formatXLSX(dnn)
 pltDNN <- create_plot(dnn)
 ## ------------------------------------------------------------
 
@@ -157,3 +163,29 @@ pdf("result/Fig-3_DNN_results.pdf", width = 8.3 * 1.5 / 2, height = 8.0 / 2)
 plot(pltDNN)
 dev.off()
 print("done")
+
+calcStats <- function(x) {
+  x <- tidyr::pivot_wider(x, names_from = "Type", values_from = "value")
+  x <- as.data.frame(x)
+  rownames(x) <- x$drug
+  x$drug <- NULL
+  x <- data.matrix(x)
+  out <- data.frame(
+    mean = rowMeans(x),
+    median = apply(x, 1, median),
+    sd = apply(x, 1, sd),
+    se = apply(x, 1, sd) / sqrt(ncol(x)),
+    min = apply(x, 1, min),
+    max = apply(x, 1, max)
+  )
+}
+y <- calcStats(dnn)
+l <- list(
+  "RandomForest perf metrics-train" = trRF,
+  "RandomForest perf metrics-test" = tsRF,
+  "ElasticNet perf metrics-train" = trEN,
+  "ElasticNet perf metrics-test" = tsEN,
+  "DeepLearning perf metrics" = dnn
+)
+l <- lapply(l, calcStats)
+write_xlsx(l, "./result/fig2-violin-stats.xlsx")
