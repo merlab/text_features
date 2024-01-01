@@ -3,4 +3,6 @@
 *.RData
 *.Rhistory
 .Rhistory
-R/.Rhistory
+code/.Rhistory
+data/erlotinib_CCLE_PDXE.rds
+data/erlotinib_CCLE-CTRPv2_model_TextMining.rds
