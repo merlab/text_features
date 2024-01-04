@@ -48,8 +48,8 @@ dotplotORA <- function(m, title = NA) {
       theme_bw() +
       theme(
         axis.text.y = element_text(size = 10),
-        legend.position = "bottom",
-        legend.box = "vertical",
+        legend.position = "right", # "bottom",
+        legend.box = "vertical", # "horizontal", #
         panel.background = element_rect(fill = "transparent", color = NA), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         legend.background = element_rect(fill = "transparent", color = NA), # get rid of legend bg
@@ -105,15 +105,17 @@ for (i in sheets) {
   # goSubMat <- rbind(goMat, goMat[seq_len(15 - nrow(goMat)), ])
   p[[i]] <- dotplotORA(oraMat, i)
 }
-pdf("./result/ORA_res.pdf", height = 10, width = 12)
-plot(ggarrange(
-  plotlist = p[1:2], nrow = 2, ncol = 1,
-  labels = paste0("    (", LETTERS[1:2], ")"),
-  common.legend = TRUE, align = "v", legend = "right"
-))
-plot(ggarrange(
-  plotlist = p[3:4], nrow = 2, ncol = 1,
-  labels = paste0("    (", LETTERS[3:4], ")"),
-  common.legend = TRUE, align = "v", legend = "right"
-))
+# pdf("./result/ORA_res.pdf", height = 10, width = 12)
+pdf("./result/ORA_res.pdf", height = 5, width = 10)
+lapply(p, plot)
+# plot(ggarrange(
+#   plotlist = p[1:2], nrow = 2, ncol = 1,
+#   labels = paste0("    (", LETTERS[1:2], ")"),
+#   common.legend = TRUE, align = "v", legend = "right"
+# ))
+# plot(ggarrange(
+#   plotlist = p[3:4], nrow = 2, ncol = 1,
+#   labels = paste0("    (", LETTERS[3:4], ")"),
+#   common.legend = TRUE, align = "v", legend = "right"
+# ))
 dev.off()

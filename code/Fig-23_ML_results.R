@@ -165,12 +165,15 @@ dev.off()
 print("done")
 
 calcStats <- function(x) {
-  x <- tidyr::pivot_wider(x, names_from = "Type", values_from = "value")
+  x <- tidyr::pivot_wider(x, names_from = "drug", values_from = "value")
   x <- as.data.frame(x)
-  rownames(x) <- x$drug
-  x$drug <- NULL
+  # rownames(x) <- x$drug
+  # x$drug <- NULL
+  rownames(x) <- x$Type
+  x$Type <- NULL
   x <- data.matrix(x)
   out <- data.frame(
+    drug = rownames(x),
     mean = rowMeans(x),
     median = apply(x, 1, median),
     sd = apply(x, 1, sd),
@@ -179,7 +182,6 @@ calcStats <- function(x) {
     max = apply(x, 1, max)
   )
 }
-y <- calcStats(dnn)
 l <- list(
   "RandomForest perf metrics-train" = trRF,
   "RandomForest perf metrics-test" = tsRF,
@@ -189,3 +191,5 @@ l <- list(
 )
 l <- lapply(l, calcStats)
 write_xlsx(l, "./result/fig2-violin-stats.xlsx")
+
+print("done")
