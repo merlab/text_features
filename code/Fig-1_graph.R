@@ -17,15 +17,17 @@ createPieChart <- function(v, title = NA) {
   df$tissue <- factor(df$tissue, levels = df$tissue)
   p <- ggplot(df, aes(x = "", y = freq, fill = tissue)) +
     geom_bar(stat = "identity", width = 1, color = "white") +
-    scale_fill_manual(name = "",
-                      values = c("grey75",
-                                 "#FED439FF", "#709AE1FF", "magenta", "#D2AF81FF", "#FD7446FF",
-                                   "#D5E4A2FF", "#197EC0FF", "#F05C3BFF", "#46732EFF", "#71D0F5FF",
-                                   "#370335FF", "#075149FF", "#C80813FF", "#91331FFF", "#1A9993FF",
-                                   "#FD8CC1FF"
-                                 # "#8A9197FF",
-                                 )
-                      ) +
+    scale_fill_manual(
+      name = "",
+      values = c(
+        "grey75",
+        "#FED439FF", "#709AE1FF", "magenta", "#D2AF81FF", "#FD7446FF",
+        "#D5E4A2FF", "#197EC0FF", "#F05C3BFF", "#46732EFF", "#71D0F5FF",
+        "#370335FF", "#075149FF", "#C80813FF", "#91331FFF", "#1A9993FF",
+        "#FD8CC1FF"
+        # "#8A9197FF",
+      )
+    ) +
     coord_polar("y", start = 0) +
     xlab("") +
     ylab("") +

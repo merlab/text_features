@@ -26,13 +26,15 @@ convertTissues <- function(v) {
     "Other" = c("haematopoietic_and_lymphoid_tissue", "Other", "Myeloid", "Lymphoid", "Head and Neck", "salivary_gland")
   )
 
-  priotList <- c("Breast","Lung","Pancreas","Prostate","Gynecological",
-                 "Brain","Kidney","Bladder","Thyroid",
-  "Skin","Bone","Digestive","Liver",
-  "Soft tissue",
-  # "Salivary Glands",
-  #"Head and Neck",
-  "Other")
+  priotList <- c(
+    "Breast", "Lung", "Pancreas", "Prostate", "Gynecological",
+    "Brain", "Kidney", "Bladder", "Thyroid",
+    "Skin", "Bone", "Digestive", "Liver",
+    "Soft tissue",
+    # "Salivary Glands",
+    # "Head and Neck",
+    "Other"
+  )
   # priotList <- rev(priotList)
   v <- tolower(v)
   for (i in names(convL)) {
@@ -52,11 +54,15 @@ cleanNames <- function(x) {
   return(x)
 }
 a <- readRDS("./data/ccle_ctrpv2_aac.rds")
-a <- a[apply(a, 1, function(x) return(any(!is.na(x)))), ]
+a <- a[apply(a, 1, function(x) {
+  return(any(!is.na(x)))
+}), ]
 cclecells <- rownames(a)
 
 a <- readRDS("./data/gdse_aac.rds")
-a <- a[apply(a, 1, function(x) return(any(!is.na(x)))), ]
+a <- a[apply(a, 1, function(x) {
+  return(any(!is.na(x)))
+}), ]
 gdsecells <- rownames(a)
 
 gdse <- readRDS("./data/PSet_GDSC2020.rds")
@@ -109,7 +115,7 @@ colnames(x)[1] <- colnames(y)[1] <- "tissue"
 colnames(x)[2] <- "n_cell_line_ccle"
 colnames(y)[2] <- "n_cell_line_gdse"
 #
-m <- merge(x,y,by = "tissue")
+m <- merge(x, y, by = "tissue")
 write_xlsx(m, "./result/cell_line_per_tissue.xlsx")
 saveRDS(drugs, "./drugs.rds")
 saveRDS(cells, "./cells.rds")
