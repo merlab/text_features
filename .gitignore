@@ -18,3 +18,4 @@ gdsetissues.rds
 tmp.rds
 cells.rds
 drugs.rds
+*.svg
