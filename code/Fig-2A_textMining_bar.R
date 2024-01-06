@@ -23,7 +23,7 @@ p <- ggplot(plotdf, aes(x = reorder(drug, nGene), y = nGene)) +
     axis.text.x = element_text(color = "black"),
     axis.text.y = element_text(color = "black")
   )
-pdf("./result/Fig-1A_txtMineBar.pdf", height = 8, width = 4)
+pdf("./result/Fig-2A_txtMineBar.pdf", height = 8, width = 4)
 plot(p)
 dev.off()
 print("done")

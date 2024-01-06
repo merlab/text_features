@@ -3,9 +3,9 @@ source("./code/helper/computeInteractionMatrix.R")
 source("./code/helper/mRMR.R")
 source("./code/helper/summarizeData_pharmacoGx.R")
 library(PharmacoGx)
+library(Xeva)
 library(readxl)
 library(writexl)
-library(Xeva)
 convertTissues <- function(v) {
   convL <- list(
     "Prostate" = c("Prostate", "Testis"),
@@ -32,11 +32,8 @@ convertTissues <- function(v) {
     "Brain", "Kidney", "Bladder", "Thyroid",
     "Skin", "Bone", "Digestive", "Liver",
     "Soft tissue",
-    # "Salivary Glands",
-    # "Head and Neck",
     "Other"
   )
-  # priotList <- rev(priotList)
   v <- tolower(v)
   for (i in names(convL)) {
     for (j in convL[[i]]) {
@@ -73,6 +70,8 @@ ccle <- readRDS("./data/CCLE-CTRPv2_Kallisto_0.46.1.rnaseq.rds")
 ccletissues <- cellInfo(ccle)$tissue
 
 
+saveRDS(ccletissues, "./ccle_tissues_raw.rds")
+saveRDS(gdsetissues, "./gdse_tissues_raw.rds")
 
 # cleaning
 gdsecells <- unique(cleanNames(gdsecells))
