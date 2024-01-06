@@ -22,9 +22,10 @@ convertTissues <- function(v) {
     "Breast" = c("breast"),
     "Liver" = c("liver"),
     "Digestive" = c("esophagus", "upper_aerodigestive_tract", "large_intestine", "biliary_tract", "stomach", "biliary"),
-    # "Salivary Glands" = c("salivary_gland"),
     "Other" = c("haematopoietic_and_lymphoid_tissue", "Other", "Myeloid", "Lymphoid", "Head and Neck", "salivary_gland")
   )
+
+  # "Salivary Glands" = c("salivary_gland"),
 
   priotList <- c(
     "Breast", "Lung", "Pancreas", "Prostate", "Gynecological",
@@ -65,14 +66,11 @@ a <- a[apply(a, 1, function(x) {
 }), ]
 gdsecells <- rownames(a)
 
+# NOTE: extract tissue types
 gdse <- readRDS("./data/PSet_GDSC2020.rds")
-clinfo <- cellInfo(gdse)
-# gdsecells <- rownames(clinfo)
-gdsetissues <- clinfo$tissue
+gdsetissues <- cellInfo(gdse)$tissue
 ccle <- readRDS("./data/CCLE-CTRPv2_Kallisto_0.46.1.rnaseq.rds")
-clinfo <- cellInfo(ccle)
-# cclecells <- rownames(clinfo)
-ccletissues <- clinfo$ccle_primary_site
+ccletissues <- cellInfo(ccle)$tissue
 
 
 
@@ -121,3 +119,4 @@ saveRDS(drugs, "./drugs.rds")
 saveRDS(cells, "./cells.rds")
 saveRDS(ccletissues, "./ccletissues.rds")
 saveRDS(gdsetissues, "./gdsetissues.rds")
+print("done")
