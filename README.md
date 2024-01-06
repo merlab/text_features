@@ -40,6 +40,10 @@ For each argument, refer to "Reference for valid arguments" table below, for all
 **Call with arguments:** pSet, method, problem, drugname, metric, type  
 **Example:** rScript plot_data.R GDSC glmnet regression Adavosertib COR test
 
+### code/Fig-*.R
+**Purpose:** produces the figures used in the manuscript.
+No call arguments required.
+
 ## Reference for valid arguments  
 | Argument  | Valid inputs |
 | ------------- | ------------- |
