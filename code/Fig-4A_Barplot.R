@@ -18,6 +18,6 @@ p <- p + theme(
 ) +
   xlab("Feature Selection Method") + ylab("Pearson Correlation") + scale_y_continuous(expand = c(0, 0))
 p
-pdf(sprintf("./result/Fig3A_Barplot.pdf"), width = 6.5, height = 5)
+pdf("./result/Fig4A_Barplot.pdf", width = 6.5, height = 5)
 print(p)
 dev.off()

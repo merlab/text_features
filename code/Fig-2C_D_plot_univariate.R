@@ -162,7 +162,7 @@ pltDr <- pltDr + coord_flip()
 plt <- plt + xlab("") + theme_classic2()
 pltDr <- pltDr + theme_classic2()
 
-png("result/Fig-1C_D_univar.png", width = 7.0, height = 6, units = "in", res = 500)
+png("result/Fig-2C_D_univar.png", width = 7.0, height = 6, units = "in", res = 500)
 print(ggarrange(plt, pltDr,
   ncol = 2, nrow = 1,
   common.legend = T, legend = c("top", "bottom", "left", "right", "none")[2],
