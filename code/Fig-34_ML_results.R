@@ -33,7 +33,7 @@ raincloud_theme <- theme(
 
 ## -------------------------------------------------------------
 
-create_plot <- function(dft, title = NA) {
+create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
   # fetMeth <- colnames(df)[colnames(df) != "drug"]
   dft <- as.data.frame(dft)
   #   fetMeth <- c("var-100", "var-500", "L1000-tm", "L1000", "cor-500", "text-mining")
@@ -90,7 +90,7 @@ create_plot <- function(dft, title = NA) {
     theme(plot.title = element_text(hjust = 0.5)) +
     raincloud_theme +
     xlab("") + # xlab("Feature Selection Method") +
-    ylab("Pearson correlation")
+    ylab(ylab)
 
   g <- g + scale_color_manual(values = cl) + scale_fill_manual(values = cl)
   g <- g + stat_compare_means(
@@ -120,47 +120,61 @@ create_plot <- function(dft, title = NA) {
 
 # f <- "./result/mlModelMetrics.xlsx"
 f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
-formatXLSX <- function(x) {
-  x <- x[, c("drug", "feature selection method", "pearsonCor")]
+formatXLSX <- function(x, valCol = "pearsonCor") {
+  x <- x[, c("drug", "feature selection method", valCol)]
   colnames(x) <- c("drug", "Type", "value")
   return(x)
 }
-trRF <- read_xlsx(f, sheet = "RandomForest perf metrics-train")
-trRF <- formatXLSX(trRF)
-pltTRRF <- create_plot(trRF)
-## ------------------------------------------------------------
-tsRF <- read_xlsx(f, sheet = "RandomForest perf metrics-test")
-tsRF <- formatXLSX(tsRF)
-pltTSRF <- create_plot(tsRF)
-## ------------------------------------------------------------
-## ---- Elastic-Net training and test plot --------------------
-trEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-train")
-trEN <- formatXLSX(trEN)
-pltTREN <- create_plot(trEN)
-## ------------------------------------------------------------
-
-tsEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-test")
-tsEN <- formatXLSX(tsEN)
-pltTSEN <- create_plot(tsEN)
-## ------------------------
-# pdf("result/Fig-2_ML_results.pdf", width = 8.3 * 1.2, height = 8.0)
-# pdf("result/Fig-2_ML_results.pdf", width = 8.3 * 1.5/ 2, height = 8.0 * 2)
 pdf("result/Fig-2_ML_results.pdf", width = 8.5, height = 13)
-print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
-  # labels = c("A", "B", "C", "D"),
-  # ncol = 2, nrow = 2
-  ncol = 1, nrow = 4
-))
+
+methods <- c("pearsonCor", "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE")
+ylabs <-
+  c(
+    "pearsonCor" = "Pearson correlation",
+    "spearmanCor" = "Spearman correlation",
+    "kendallCor" = "Kendall correlation",
+    "RMSE" = "RMSE",
+    "MSE" = "MSE",
+    "MAE" = "MAE"
+  )
+for (i in methods) {
+  print(i)
+  trRF <- read_xlsx(f, sheet = "RandomForest perf metrics-train")
+  trRF <- formatXLSX(trRF, valCol = i)
+  pltTRRF <- create_plot(trRF, ylab = ylabs[i])
+  ## ------------------------------------------------------------
+  tsRF <- read_xlsx(f, sheet = "RandomForest perf metrics-test")
+  tsRF <- formatXLSX(tsRF, valCol = i)
+  pltTSRF <- create_plot(tsRF, ylab = ylabs[i])
+  ## ------------------------------------------------------------
+  ## ---- Elastic-Net training and test plot --------------------
+  trEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-train")
+  trEN <- formatXLSX(trEN, valCol = i)
+  pltTREN <- create_plot(trEN, ylab = ylabs[i])
+  ## ------------------------------------------------------------
+
+  tsEN <- read_xlsx(f, sheet = "ElasticNet perf metrics-test")
+  tsEN <- formatXLSX(tsEN, valCol = i)
+  pltTSEN <- create_plot(tsEN, ylab = ylabs[i])
+  ## ------------------------
+  print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
+    labels = c("train_RF", "test_RF", "train_EN", "test_EN"),
+    ncol = 1, nrow = 4
+  ))
+}
 dev.off()
 ## ------------------------------------------------------------
 ## ---- Elastic-Net training and test plot --------------------
-dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
-dnn <- formatXLSX(dnn)
-pltDNN <- create_plot(dnn)
 ## ------------------------------------------------------------
 
-pdf("result/Fig-3_DNN_results.pdf", width = 8.3 * 1.5 / 2, height = 8.0 / 2)
-plot(pltDNN)
+pdf("result/DNN_results.pdf", width = 8.3 * 1.5 / 2, height = 8.0 / 2)
+for (i in methods) {
+  print(i)
+  dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
+  dnn <- formatXLSX(dnn, valCol = i)
+  pltDNN <- create_plot(dnn, ylab = ylabs[i])
+  plot(pltDNN)
+}
 dev.off()
 print("done")
 
@@ -190,6 +204,6 @@ l <- list(
   "DeepLearning perf metrics" = dnn
 )
 l <- lapply(l, calcStats)
-write_xlsx(l, "./result/fig2-violin-stats.xlsx")
+# write_xlsx(l, "./result/fig2-violin-stats.xlsx")
 
 print("done")
