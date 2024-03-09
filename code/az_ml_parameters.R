@@ -22,8 +22,8 @@ for (i in files) {
   geneFilterMethod <- paste0(unlist(strsplit(name, "-")[[1]][-1]), collapse = "-")
   tune <- mlModel$bestTune
   seed <- mlModel$seed
-  type <- mlModel$modelType
-  genes <- paste0(genes, collapse = ",")
+  # type <- mlModel$modelType
+  # genes <- paste0(genes, collapse = ",")
 
 
   if (grepl("-rf-", i)) {
@@ -31,32 +31,44 @@ for (i in files) {
     table_rf[idx, "drug"] <- drug
     table_rf[idx, "feature selection method"] <- geneFilterMethod
     table_rf[idx, names(tune)] <- tune
-    table_rf[idx, "seed"] <- seed
-    table_rf[idx, "type"] <- type
-    table_rf[idx, "selected genes"] <- genes
+    table_rf[idx, "ntree"] <- mlModel$finalModel$"ntree"
+    table_rf[idx, "nornodes"] <- mlModel$finalModel$forest$nrnodes
+    # $nrnodes
+    # table_rf[idx, ] <-
+    # table_rf[idx, "seed"] <- seed
+    # table_rf[idx, "type"] <- type
+    # table_rf[idx, "selected genes"] <- genes
   } else {
     idx <- nrow(table_glm) + 1
     table_glm[idx, "drug"] <- drug
     table_glm[idx, "feature selection method"] <- geneFilterMethod
     table_glm[idx, names(tune)] <- tune
-    table_glm[idx, "maximize"] <- mlModel$maximize
-    table_glm[idx, "seed"] <- seed
-    table_glm[idx, "type"] <- type
-    table_glm[idx, "selected genes"] <- genes
-    names(mlModel)
-    str(mlModel)
-    stop()
+    # table_glm[idx, "maximize"] <- mlModel$maximize
+    # table_glm[idx, "lambdaOpt"] <- mlModel$finalModel$lambdaOpt
+    # table_glm[idx, "jerr"] <- mlModel$finalModel$jerr
+    table_glm[idx, "nobs"] <- mlModel$finalModel$nobs
+    # table_glm[idx, "npasses"] <- mlModel$finalModel$npasses
+    # table_glm[idx, "offset"] <- mlModel$finalModel$offset
+    # table_glm[idx, "seed"] <- seed
+    # # table_glm[idx, "type"] <- type
+    # table_glm[idx, "selected genes"] <- genes
+    # names(mlModel$finalModel)
   }
 
   v <- c()
 }
+df <- merge(table_glm, table_rf, by = c("drug", "feature selection method"))
 
 warm1Style <- createStyle(fontColour = "#FFFFFF", bgFill = "#FF0000")
 wb <- createWorkbook()
-addWorksheet(wb, "ElasticNet parameters", gridLines = TRUE)
-writeData(wb, "ElasticNet parameters", table_glm)
-addWorksheet(wb, "RandomForest parameters", gridLines = TRUE)
-writeData(wb, "RandomForest parameters", table_rf)
+#
+addWorksheet(wb, "parameters", gridLines = TRUE)
+writeData(wb, "parameters", df)
+#
+# addWorksheet(wb, "ElasticNet parameters", gridLines = TRUE)
+# writeData(wb, "ElasticNet parameters", table_glm)
+# addWorksheet(wb, "RandomForest parameters", gridLines = TRUE)
+# writeData(wb, "RandomForest parameters", table_rf)
 
 saveWorkbook(wb, "./parameters.xlsx", overwrite = TRUE)
 print("done")

@@ -3,8 +3,7 @@ library(caret)
 library(openxlsx)
 set.seed(123)
 cells <- readRDS("./cells.rds")
-# commonCellLines <- intersect(cells[[1]], cells[[2]])
-inDir <- "./result/ml_model_list/"
+inDir <- "./result/ml_model_list_pathways/"
 files <- list.files(inDir, pattern = ".*-.*.rds")
 files <- gsub("\\.rds", "", files)
 table_rf_test <- data.frame()
@@ -37,29 +36,23 @@ calculateMetrics <- function(pred, obs) {
 trainIn <- readRDS("./result/ml_model_list/ccle_ctrpv2_rnaseq.rds")
 trainOut <- readRDS("./result/ml_model_list/ccle_ctrpv2_aac.rds")
 testIn <- readRDS("./result/ml_model_list/gdse_rnaseq.rds")
-# stop()
 testOut <- readRDS("./result/ml_model_list/gdse_aac.rds")
-# idx <- which(!rownames(testIn) %in% commonCellLines)
-# testIn <- testIn[idx, ]
-# testOut <- testOut[idx, ]
-mlMethods <- c("var-100", "var-500", "cor-500", "text-mining", "L1000", "L1000-tm")
 
 for (i in files) {
   mlModel <- readRDS(sprintf("%s/%s.rds", inDir, i))
   name <- gsub("-rf|-glmnet", "", i)
   drug <- strsplit(name, "-")[[1]][1]
   genes <- mlModel$genes
-  geneFilterMethod <- paste0(unlist(strsplit(name, "-")[[1]][-1]), collapse = "-")
 
   trainPred <- predict(mlModel, na.omit(trainIn[, genes]))
   metrics <- calculateMetrics(pred = trainPred, obs = trainOut[names(trainPred), drug])
-  vtrain <- unlist(c(drug, geneFilterMethod, metrics))
+  vtrain <- unlist(c(drug, "pathway", metrics))
 
   testPred <- predict(mlModel, na.omit(testIn[, genes]))
   metrics <- calculateMetrics(pred = testPred, obs = testOut[names(testPred), drug])
-  vtest <- unlist(c(drug, geneFilterMethod, metrics))
+  vtest <- unlist(c(drug, "pathway", metrics))
 
-  if (grepl("-rf-", i)) {
+  if (grepl("-rf", i)) {
     table_rf_test <- rbind(vtest, table_rf_test)
     table_rf_train <- rbind(vtrain, table_rf_train)
   } else {
@@ -93,31 +86,6 @@ l <- lapply(l, function(x) {
   return(x)
 })
 
-fs <- list.files("./data/other_ml_results_test/", pattern = "*.csv")
-for (i in fs) {
-  if (grepl("ElasticNet", i)) {
-    n <- "ElasticNet perf metrics-test"
-  } else {
-    n <- "RandomForest perf metrics-test"
-  }
-  geneFilterMethod <- strsplit(i, "_")[[1]][3]
-  geneFilterMethod <- gsub("Genetic", "GA", geneFilterMethod)
-  df <- l[[n]]
-  raw <- read.csv(sprintf("./data/other_ml_results_test/%s", i), header = TRUE)
-  drugs <- unique(unlist(strsplit(colnames(raw), "_")))
-  drugs <- drugs[!drugs %in% c("pred", "actual")]
-  for (j in drugs) {
-    cols <- grep(j, colnames(raw), value = TRUE)
-    obs <- as.vector(raw[, cols[1]])
-    pred <- as.vector(raw[, cols[2]])
-    out <- calculateMetrics(pred, obs)
-    dfIdx <- nrow(df) + 1
-    df[dfIdx, "drug"] <- j
-    df[dfIdx, "feature selection method"] <- geneFilterMethod
-    df[dfIdx, names(out)] <- out
-  }
-  l[[n]] <- df
-}
 
 
 warm1Style <- createStyle(fontColour = "#FFFFFF", bgFill = "#FF0000")
@@ -127,7 +95,5 @@ for (i in names(l)) {
   addWorksheet(wb, i, gridLines = TRUE)
   writeData(wb, i, x)
 }
-saveWorkbook(wb, "./mlModelMetrics.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "./mlModelMetrics_pathway.xlsx", overwrite = TRUE)
 print("done")
-# raw <- read.csv(sprintf("./data/other_ml_results_test/%s", "Y__Genetic_ElasticNet.csv"), header = TRUE)
-# raw <- read.csv(sprintf("./data/other_ml_results_test/%s", "Y__Genetic_RandomForest.csv"), header = TRUE)

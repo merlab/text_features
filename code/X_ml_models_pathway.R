@@ -1,10 +1,7 @@
 #!/usr/bin/env Rscript
 cells <- readRDS("./cells.rds")
-commonCellLines <- intersect(cells[[1]], cells[[2]])
 args <- commandArgs(trailingOnly = TRUE)
-# args <- c("glmnet", "textmining", 20, 0, 0.2, 0.9)
 mlMethods <- "rf"
-# geneSelectMethods <- args[2]
 library(future)
 library(caret)
 library(psych)
@@ -15,7 +12,7 @@ library(tidyverse)
 #
 library(doParallel)
 library(foreach)
-max.try <- 200
+max.try <- 1
 
 min.desirable.distance <- -1 # as.numeric(args[4])
 max.desirable.distance <- 0 # as.numeric(args[5])
@@ -65,7 +62,7 @@ trainModel <- function(x, y, gdseX, gdseY,
 
   bestDistAchieved <- 1
   bestModel <- list()
-  for (i in names(indexes)) {
+  for (i in names(indexes)[1]) {
     # modelList <- foreach(i == seq_len(indexes)) %dopar% {
     trIndx <- indexes[[i]]
     tsIndx <- setdiff(seq_len(nrow(x)), trIndx)
@@ -123,9 +120,9 @@ trainModel <- function(x, y, gdseX, gdseY,
         "GADD45A", "GIT1", "GSK3B", "MDM2", "NDEL1", "NFKBIA", "OAZ1",
         "PAK1", "PPP2R5D", "PRKACA", "RAN", "RASA1", "TACC1", "TACC3",
         "TDRD7", "TP53", "TPX2"
-      ),
+      )
     )
-    selectGenes <- pathwayKeyValue[[drug]]
+    selectedGenes <- pathwayKeyValue[[drug]]
     selectedGenes <- intersect(selectedGenes, colnames(x))
     selectedGenes <- intersect(selectedGenes, colnames(gdseX))
 
@@ -287,15 +284,15 @@ for (mlMethod in mlMethods) {
       x <- x[idx, ]
       y <- y[idx]
 
-      idx <- which(!rownames(targetX) %in% commonCellLines)
+      # idx <- which(!rownames(targetX) %in% commonCellLines)
 
       tryCatch(
         expr = {
           model <- trainModel(
             x = x,
             y = y,
-            gdseX = targetX[idx, ],
-            gdseY = targetY[idx, ],
+            gdseX = targetX,
+            gdseY = targetY,
             drug = drug,
             mlMethod = mlMethod,
             # geneSelectMethod = geneSelectMethod,

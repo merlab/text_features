@@ -94,7 +94,7 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 
   g <- g + scale_color_manual(values = cl) + scale_fill_manual(values = cl)
   g <- g + stat_compare_means(
-    comparisons = my_comparisons, method = "wilcox.test", paired = TRUE,
+    comparisons = my_comparisons, method = "wilcox.test", paired = FALSE,
     # label.y = 0.7,
     size = 2.5
   )
@@ -126,12 +126,15 @@ f <- "./mlModelMetrics.xlsx"
 formatXLSX <- function(x, valCol = "pearsonCor") {
   x <- x[, c("drug", "feature selection method", valCol)] # "feature selection method"
   colnames(x) <- c("drug", "Type", "value")
+  x$value <- as.numeric(x$value)
+  x <- x[x$value > -0.4, ]
   return(x)
 }
 h <- 4
-pdf("./ML_results.pdf", width = h * 1.4, height = h * 2)
+# pdf("./ML_results.pdf", width = h * 1.4 * 2, height = h * 2)
+pdf("./ML_results.pdf", width = h * 1.4, height = h)
 
-methods <- c("spearmanCor", "kendallCor", "RMSE", "MSE", "MAE") #
+methods <- c("pearsonCor") # , "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE") #
 # "pearsonCor",
 ylabs <-
   c(
@@ -162,55 +165,24 @@ for (i in methods) {
   tsEN <- formatXLSX(tsEN, valCol = i)
   pltTSEN <- create_plot(tsEN, ylab = ylabs[i])
   ## ------------------------
-  print(ggarrange(pltTRRF, pltTSRF,
-    labels = c("A", "B"),
-    ncol = 1, nrow = 2
-  ))
-  print(ggarrange(pltTREN, pltTSEN,
-    labels = c("A", "B"),
-    ncol = 1, nrow = 2
-  ))
+  plot(pltTSRF)
+  plot(pltTSEN)
+  # print(ggarrange(, pltTSRF,
+  #   pltTREN, ,
+  #   labels = c("RF_train", "RF_test", "EN_train", "EN_test"),
+  #   ncol = 2, nrow = 2
+  # ))
 }
 dev.off()
 
-f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
-pdf("./DNN_results.pdf", width = h * 1.4, height = h)
-for (i in methods) {
-  print(i)
-  dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
-  dnn <- formatXLSX(dnn, valCol = i)
-  pltDNN <- create_plot(dnn, ylab = ylabs[i])
-  plot(pltDNN)
-}
-dev.off()
-print("done")
-
-# calcStats <- function(x) {
-#   x <- tidyr::pivot_wider(x, names_from = "drug", values_from = "value")
-#   x <- as.data.frame(x)
-#   # rownames(x) <- x$drug
-#   # x$drug <- NULL
-#   rownames(x) <- x$Type
-#   x$Type <- NULL
-#   x <- data.matrix(x)
-#   out <- data.frame(
-#     drug = rownames(x),
-#     mean = rowMeans(x),
-#     median = apply(x, 1, median),
-#     sd = apply(x, 1, sd),
-#     se = apply(x, 1, sd) / sqrt(ncol(x)),
-#     min = apply(x, 1, min),
-#     max = apply(x, 1, max)
-#   )
+# f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+# pdf("./DNN_results.pdf", width = h * 1.4, height = h)
+# for (i in methods) {
+#   print(i)
+#   dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
+#   dnn <- formatXLSX(dnn, valCol = i)
+#   pltDNN <- create_plot(dnn, ylab = ylabs[i])
+#   plot(pltDNN)
 # }
-# l <- list(
-#   "RandomForest perf metrics-train" = trRF,
-#   "RandomForest perf metrics-test" = tsRF,
-#   "ElasticNet perf metrics-train" = trEN,
-#   "ElasticNet perf metrics-test" = tsEN,
-#   "DeepLearning perf metrics" = dnn
-# )
-# l <- lapply(l, calcStats)
-# # write_xlsx(l, "./result/fig2-violin-stats.xlsx")
-#
+# dev.off()
 # print("done")

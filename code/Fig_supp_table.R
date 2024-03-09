@@ -1,5 +1,4 @@
-# NOTE: this figure was modified from the old script to include the new
-# results (REF, MRMR, and GA)
+# generate supp tables
 library(readxl)
 library(ggplot2)
 library(ggpubr)
@@ -121,7 +120,7 @@ generateTable <- function(inFile, inSheet) {
     )
   )
 }
-pdf("./table.pdf", height = 3.5, width = 12)
+pdf("./result/supp_tables.pdf", height = 3.5, width = 12)
 generateTable(inFile = "./mlModelMetrics.xlsx", inSheet = "RandomForest perf metrics-test")
 grid.newpage()
 generateTable(inFile = "./mlModelMetrics.xlsx", inSheet = "ElasticNet perf metrics-test")
