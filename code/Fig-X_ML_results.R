@@ -68,11 +68,13 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
     function(i) c(i, fetMeth[length(fetMeth)])
   )
 
-  # df$drug <- rownames(df)
+  # NOTE: pairing
+  dft <- na.omit(dft)
+  tbl <- (table(dft$drug))
+  torm <- names(tbl)[tbl < 9]
+  dft <- dft[!dft$drug %in% torm, ]
+  print(dft)
 
-  # dft <- reshape2::melt(df, id.vars = "drug", variable.name = "Type")
-  # print(head(dft))
-  # stop()
 
   g <- ggplot(data = dft, aes(y = value, x = Type, fill = Type)) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .95) +
@@ -80,8 +82,9 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
       position = position_jitter(width = .15), size = .5, alpha = 0.45
     ) +
     geom_boxplot(
-      width = .1, # guides = "none",
-      outlier.shape = NA, alpha = 0.5
+      width = .1,
+      outlier.shape = NA,
+      alpha = 0.5
     ) +
     expand_limits(x = 5.25) +
     guides(fill = "none") +
@@ -94,12 +97,16 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 
   g <- g + scale_color_manual(values = cl) + scale_fill_manual(values = cl)
   g <- g + stat_compare_means(
-    comparisons = my_comparisons, method = "wilcox.test", paired = FALSE,
+    comparisons = my_comparisons,
+    method = "t.test",
+    paired = TRUE,
+    # alternative = "lower",
+    method.args = list(alternative = "less"),
     # label.y = 0.7,
     size = 2.5
   )
-  minVal <- round(floor(min(dft$value) * 5) / 5, 1)
-  maxVal <- round(ceiling(max(dft$value) * 5) / 5, 1)
+  minVal <- round(floor(min(dft$value, na.rm = TRUE) * 5) / 5, 1)
+  maxVal <- round(ceiling(max(dft$value, na.rm = TRUE) * 5) / 5, 1)
 
   g <- g + scale_y_continuous(breaks = round(seq(minVal, maxVal, 0.2), 1))
   g + theme(
@@ -121,18 +128,21 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 ## --------------------------------------------------------------
 ## ---- Random-forest training and test plot --------------------
 
-f <- "./mlModelMetrics.xlsx"
-# f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+# f <- "./mlModelMetrics.xlsx"
+# f <- "./File2check.xlsx"
+f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
 formatXLSX <- function(x, valCol = "pearsonCor") {
+  x <- as.data.frame(x)
   x <- x[, c("drug", "feature selection method", valCol)] # "feature selection method"
   colnames(x) <- c("drug", "Type", "value")
   x$value <- as.numeric(x$value)
-  x <- x[x$value > -0.4, ]
+  torm <- unique(x$drug[x$value < -0.5])
+  x <- x[!x$drug %in% torm, ]
   return(x)
 }
 h <- 4
 # pdf("./ML_results.pdf", width = h * 1.4 * 2, height = h * 2)
-pdf("./ML_results.pdf", width = h * 1.4, height = h)
+pdf("./tmp.pdf", width = h * 1.5, height = h * 4)
 
 methods <- c("pearsonCor") # , "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE") #
 # "pearsonCor",
@@ -165,13 +175,14 @@ for (i in methods) {
   tsEN <- formatXLSX(tsEN, valCol = i)
   pltTSEN <- create_plot(tsEN, ylab = ylabs[i])
   ## ------------------------
-  plot(pltTSRF)
-  plot(pltTSEN)
-  # print(ggarrange(, pltTSRF,
-  #   pltTREN, ,
-  #   labels = c("RF_train", "RF_test", "EN_train", "EN_test"),
-  #   ncol = 2, nrow = 2
-  # ))
+  # plot(pltTSRF)
+  # plot(pltTSEN)
+  print(ggarrange(pltTRRF, pltTSRF,
+    pltTREN, pltTSEN,
+    # labels = c("RF_train", "RF_test", "EN_train", "EN_test"),
+    labels = c("A", "B", "C", "D"),
+    ncol = 1, nrow = 4
+  ))
 }
 dev.off()
 

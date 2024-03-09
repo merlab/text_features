@@ -112,14 +112,16 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 ## ---- Random-forest training and test plot --------------------
 
 # f <- "./mlModelMetrics.xlsx"
-f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+# f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+# f <- "./File2check.xlsx"
 formatXLSX <- function(x, valCol = "pearsonCor") {
   x <- x[, c("drug", "feature selection method", valCol)]
   colnames(x) <- c("drug", "Type", "value")
   return(x)
 }
 h <- 3.5
-pdf("./result/ML_results.pdf", width = h * 1.4 * 2, height = h * 2)
+# pdf("./result/ML_results.pdf", width = h * 1.4 * 2, height = h * 2)
+pdf("./tmp.pdf", width = h * 1.4 * 2, height = h * 2)
 
 methods <- c("pearsonCor") # , "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE")
 ylabs <-

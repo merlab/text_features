@@ -1,4 +1,3 @@
-# purpose: make the tables
 # library(writexl)
 library(caret)
 library(openxlsx)
@@ -93,51 +92,61 @@ l <- lapply(l, function(x) {
   return(x)
 })
 
-dirs <- c("./data/other_ml_results_test/EN", "./data/other_ml_results_test/RF")
-for (d in dirs) {
-  if (grepl("EN", d)) {
+fs <- list.files("./data/other_ml_results_test/", pattern = "*.csv")
+for (i in fs) {
+  if (grepl("ElasticNet", i)) {
     n <- "ElasticNet perf metrics-test"
   } else {
     n <- "RandomForest perf metrics-test"
   }
+  geneFilterMethod <- strsplit(i, "_")[[1]][3]
+  geneFilterMethod <- gsub("Genetic", "GA", geneFilterMethod)
   df <- l[[n]]
-  for (model in list.dirs(d)[-1]) {
-    print(model)
-    fs <- list.files(model, pattern = "*.csv")
-    for (i in fs) {
-      geneFilterMethod <- strsplit(i, "_")[[1]][3]
-      geneFilterMethod <- gsub("Genetic", "GA", geneFilterMethod)
-      raw <- read.csv(sprintf("%s/%s", model, i), header = TRUE)
-      rownames(raw) <- raw$removed.common
-      raw$removed.common <- NULL
-      raw <- raw[rownames(raw) %in% rownames(testOut), ]
-      drug <- gsub("_", "", i)
-      drug <- gsub("\\.csv", "", drug)
-      geneFilterMethod <- gsub(d, "", model)
-      geneFilterMethod <- gsub("/", "", geneFilterMethod)
-      dfIdx <- nrow(df) + 1
-      df[dfIdx, "drug"] <- drug
-      df[dfIdx, "feature selection method"] <- geneFilterMethod
-      pred <- as.vector(raw[, grep("_pred", colnames(raw))])
-      obs <- as.vector(raw[, grep("_actual", colnames(raw))])
-      # if (length(obs) < 20) next()
-      # if (sd(obs) == 0 || sd(pred) == 0) next()
-      out <- calculateMetrics(pred, obs)
-      df[dfIdx, names(out)] <- out
-    }
+  raw <- read.csv(sprintf("./data/other_ml_results_test/%s", i), header = TRUE)
+  drugs <- unique(unlist(strsplit(colnames(raw), "_")))
+  drugs <- drugs[!drugs %in% c("pred", "actual")]
+  # raw2 <- raw[, grep("_actual", colnames(raw))]
+  # colnames(raw2) <- gsub("_actual", "", colnames(raw2))
+  # raw2 <- round(raw2, 3)
+  # testOut <- round(testOut, 3)
+  # testOut <- testOut[, colnames(raw2)]
+  # #   idx <- which(testOut %in% raw2, arr.ind = TRUE)
+  # idx <- data.frame()
+  # for (x in rev(rownames(testOut))) {
+  #   print(x)
+  #   for (y in seq_len(nrow(raw2))) {
+  #     aa <- (testOut[x, ] > 0.9 * raw2[y, ] & testOut[x, ] < 1.1 * raw2[y, ])
+  #     idx[x, y] <- sum(aa)
+  #   }
+  #   stop()
+  # }
+  # stop()
+  # #   all.equal.numeric(testOut[x, ], raw2[y, ])
+
+
+
+  for (j in drugs) {
+    cols <- grep(j, colnames(raw), value = TRUE)
+    obs <- as.vector(raw[, cols[1]])
+    pred <- as.vector(raw[, cols[2]])
+    out <- calculateMetrics(pred, obs)
+    dfIdx <- nrow(df) + 1
+    df[dfIdx, "drug"] <- j
+    df[dfIdx, "feature selection method"] <- geneFilterMethod
+    df[dfIdx, names(out)] <- out
   }
   l[[n]] <- df
 }
-
 
 
 warm1Style <- createStyle(fontColour = "#FFFFFF", bgFill = "#FF0000")
 wb <- createWorkbook()
 for (i in names(l)) {
   x <- l[[i]]
-  vals <- x[, "pearsonCor"]
   addWorksheet(wb, i, gridLines = TRUE)
   writeData(wb, i, x)
 }
-saveWorkbook(wb, "./mlModelMetricsRemovedCommon.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "./mlModelMetrics.xlsx", overwrite = TRUE)
 print("done")
+# raw <- read.csv(sprintf("./data/other_ml_results_test/%s", "Y__Genetic_ElasticNet.csv"), header = TRUE)
+# raw <- read.csv(sprintf("./data/other_ml_results_test/%s", "Y__Genetic_RandomForest.csv"), header = TRUE)

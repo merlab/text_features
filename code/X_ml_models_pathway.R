@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 cells <- readRDS("./cells.rds")
 args <- commandArgs(trailingOnly = TRUE)
-mlMethods <- "rf"
+mlMethods <- c("glmnet", "rf")
 library(future)
 library(caret)
 library(psych)
@@ -12,19 +12,19 @@ library(tidyverse)
 #
 library(doParallel)
 library(foreach)
-max.try <- 1
+max.try <- 50
 
 min.desirable.distance <- -1 # as.numeric(args[4])
-max.desirable.distance <- 0 # as.numeric(args[5])
+max.desirable.distance <- -0.25 # as.numeric(args[5])
 
 # desirable.distance <- 0.01
 # desirable.distance <- 0.05
-cores <- 8 # ceiling(detectCores() / 8) + 1
+cores <- 12
 cl <- makePSOCKcluster(cores)
 registerDoParallel(cl)
 #
 calculateMetrics <- function(model, pred, obs) {
-  model$perfMetric$pearsonCor <- cor(pred, obs, method = "pearson")
+  model$perfMetric$pearsonCor <- cor.test(pred, obs, method = "pearson")$estimate
   return(model)
 }
 
@@ -62,7 +62,7 @@ trainModel <- function(x, y, gdseX, gdseY,
 
   bestDistAchieved <- 1
   bestModel <- list()
-  for (i in names(indexes)[1]) {
+  for (i in names(indexes)) {
     # modelList <- foreach(i == seq_len(indexes)) %dopar% {
     trIndx <- indexes[[i]]
     tsIndx <- setdiff(seq_len(nrow(x)), trIndx)
@@ -120,6 +120,31 @@ trainModel <- function(x, y, gdseX, gdseY,
         "GADD45A", "GIT1", "GSK3B", "MDM2", "NDEL1", "NFKBIA", "OAZ1",
         "PAK1", "PPP2R5D", "PRKACA", "RAN", "RASA1", "TACC1", "TACC3",
         "TDRD7", "TP53", "TPX2"
+      ),
+      "Paclitaxel" = c(
+        "ABL1", "AKAP9", "ANKRD53", "APC", "APC2", "ARHGEF2", "ARHGEF7",
+        "ARL2", "ATAT1", "ATXN7", "BICD1", "BICD2", "BMERB1", "BORA",
+        "CAMSAP1", "CAMSAP2", "CAMSAP3", "CAV3", "CCSAP", "CDH5", "CDK2AP2",
+        "CDK5R1", "CDK5RAP2", "CDKN1B", "CENPJ", "CEP70", "CEP97", "CHMP1A",
+        "CHMP1B", "CHMP2A", "CHMP2B", "CHMP3", "CHMP4A", "CHMP4B", "CHMP4BP1",
+        "CHMP4C", "CHMP5", "CHMP6", "CHMP7", "CIB1", "CKAP2", "CKAP5",
+        "CLASP1", "CLASP2", "CLIP1", "CLIP3", "CLTC", "CYLD", "DCTN1",
+        "DIXDC1", "DRG1", "DYNC1H1", "DYRK1A", "EFNA5", "EML2", "EML3",
+        "EPHA3", "FAM107A", "FES", "FGF13", "FKBP4", "FRMPD2", "FSD1",
+        "GAS2L1", "GAS2L2", "GBA2", "GIT1", "GNAI1", "GPSM2", "GSK3B",
+        "HAUS1", "HAUS2", "HAUS3", "HAUS4", "HAUS5", "HAUS6", "HAUS7",
+        "HAUS8", "HDAC6", "HDGFL3", "HNRNPU", "HSPA1A", "HSPA1B", "KATNB1",
+        "KIF18A", "MAP1A", "MAP1B", "MAP1S", "MAP2", "MAP6", "MAP6D1",
+        "MAP9", "MAPK15", "MAPRE1", "MAPRE2", "MAPRE3", "MAPT", "MARK2",
+        "MECP2", "MET", "MID1", "MID1IP1", "MPDZ", "NAV3", "NUMA1", "NUP62",
+        "OCLN", "PAFAH1B1", "PAK1", "PARP3", "PATJ", "PDCD6IP", "PDE4DIP",
+        "PHLDB1", "PHLDB2", "PKD1", "PLK1", "PRKAA1", "PRKAA2", "PRUNE1",
+        "PSRC1", "RAC1", "RAE1", "RANGRF", "RHOA", "RNF4", "ROCK1", "RPS3",
+        "SASS6", "SENP6", "SKA1", "SKA2", "SKA3", "SLAIN1", "SLAIN2",
+        "SLC39A12", "SNCA", "SPAG5", "SPAST", "SPEF1", "STIL", "STMN1",
+        "STMN2", "STMN3", "STMN4", "STMND1", "TACC3", "TAOK1", "TBCD",
+        "TOGARAM1", "TPPP", "TPR", "TPX2", "TRAF3IP1", "TRIM36", "TRIM54",
+        "TRPV4", "TTBK2", "TUBB4A", "VPS4B", "WDR47", "WNT3A"
       )
     )
     selectedGenes <- pathwayKeyValue[[drug]]
@@ -151,8 +176,8 @@ trainModel <- function(x, y, gdseX, gdseY,
       achievedCor <- cor(pred, gdseY, method = "pearson")
       targetCor <- corTargetList[[mlMethod]][drug, "text-mining"]
       model$distanceCor <- achievedCor - targetCor
-      print(paste(i, model$distanceCor))
       model <- calculateMetrics(model, pred = pred, obs = gdseY)
+      model$perfMetric$pearsonCor <- achievedCor
       model$idx <- indexes[[i]]
       if (abs(model$distanceCor) < bestDistAchieved) {
         print("local best!")
@@ -187,7 +212,9 @@ targetOut <- readRDS("./result/ml_model_list/gdse_aac.rds")
 tGrid <- list()
 
 # harmonize columns
-drugs <- intersect(colnames(trainOut), colnames(targetOut))
+# drugs <- intersect(colnames(trainOut), colnames(targetOut))
+
+drugs <- c("Erlotinib", "Lapatinib", "Tozasertib", "Paclitaxel")
 genes <- intersect(colnames(trainIn), colnames(targetIn))
 trainIn <- trainIn[, genes]
 targetIn <- targetIn[, genes]
@@ -221,10 +248,10 @@ corTargetList <- list(
 
 
 
-drugs <- c("Erlotinib", "Lapatinib", "Tozasertib")
 for (mlMethod in mlMethods) {
-  for (drug in rev(drugs)) {
+  for (drug in drugs) { # rev(drugs)) {
     name <- paste0(paste(drug, mlMethod, sep = "-"), ".rds")
+    print(name)
     trainX <- trainIn
     cvar <- apply(trainX, 2, var)
     targetX <- targetIn
@@ -265,7 +292,7 @@ for (mlMethod in mlMethods) {
       bestMinDiffAchieved <- 1
     }
     while (TRUE) {
-      trainCut <- 0.75
+      trainCut <- 0.3
       n <- n + 1
       print(paste("try", n))
       # seed <- as.numeric(Sys.time())

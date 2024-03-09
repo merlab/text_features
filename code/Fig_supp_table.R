@@ -30,7 +30,7 @@ count_decimals <- function(x) {
   x_nchr
 }
 
-formatXLSX <- function(x, valCol = "pearsonCor") {
+formatXLSX <- function(x, valCol = "pearsonCor", pVal = 0.05) {
   inMat <- x[, c("drug", "feature selection method", valCol)] # "feature selection method"
   colnames(inMat) <- c("drug", "Type", "value")
   inMat <- as.data.frame(inMat)
@@ -42,22 +42,23 @@ formatXLSX <- function(x, valCol = "pearsonCor") {
   sds <- c()
   for (i in colnames(wideMat)) {
     x <- as.vector(unlist(wideMat[, i]))
-    means[i] <- mean(x)
-    sds[i] <- sd(x)
+    means[i] <- mean(x, na.rm = TRUE)
+    sds[i] <- sd(x, na.rm = TRUE)
   }
-  z <- abs(qnorm(0.05))
+  z <- abs(qnorm(pVal * 8))
   n <- nrow(wideMat)
   sme <- sds / sqrt(n)
 
 
   # means <- signif(means, 4)
-  means <- signif(means, 4)
-  dec <- min(count_decimals(means))
+  # means <- signif(means, 4)
+  # dec <- min(count_decimals(means))
+  dec <- 3
   ciMat <- data.frame(
     drug = colnames(wideMat),
     mean = (round(means, dec)),
-    lowCI = (round(means - (z * sds / n), dec)),
-    highCI = (round(means + (z * sds / n), dec)),
+    lowCI = (round(means - (z * sds / sqrt(n)), dec)),
+    highCI = (round(means + (z * sds / sqrt(n)), dec)),
     sme = round(sme, dec)
   )
   return(ciMat)
@@ -65,9 +66,8 @@ formatXLSX <- function(x, valCol = "pearsonCor") {
 h <- 4
 
 methods <- c("pearsonCor", "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE") #
-# "pearsonCor",
 
-generateTable <- function(inFile, inSheet) {
+generateTable <- function(inFile, inSheet, oldRes = FALSE, pVal = 0.05) {
   space <- "  "
   tableMat <- data.frame()
   rowOrder <- c(
@@ -76,9 +76,11 @@ generateTable <- function(inFile, inSheet) {
     "text-mining"
   )
   for (i in methods) {
-    print(i)
-    input <- read_xlsx(inFile, sheet = inSheet)
-    input <- formatXLSX(input, valCol = i)
+    raw <- read_xlsx(inFile, sheet = inSheet)
+    input <- formatXLSX(raw, valCol = i, pVal = pVal)
+    if (oldRes == TRUE && i == "pearsonCor") {
+      input <- formatXLSX(raw, valCol = i, pVal = 0.00001)
+    }
     ref <- input["text-mining", "mean"]
     input$sig <- (input$highCI <= ref | input$lowCI >= ref)
     input$sig <- ifelse(input$sig == TRUE, "*", "")
@@ -121,13 +123,23 @@ generateTable <- function(inFile, inSheet) {
   )
 }
 pdf("./result/supp_tables.pdf", height = 3.5, width = 12)
-generateTable(inFile = "./mlModelMetrics.xlsx", inSheet = "RandomForest perf metrics-test")
+f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+# f <- "./mlModelMetricsAllCellLine.xlsx"
+generateTable(
+  inFile = f, inSheet = "RandomForest perf metrics-test",
+  pVal = 0.05,
+  oldRes = TRUE
+)
 grid.newpage()
-generateTable(inFile = "./mlModelMetrics.xlsx", inSheet = "ElasticNet perf metrics-test")
+generateTable(
+  inFile = f, inSheet = "ElasticNet perf metrics-test",
+  pVal = 0.05
+)
 grid.newpage()
 generateTable(
   inFile = "./result/Supplementary-data-2-performance-indexes.xlsx",
-  inSheet = "DeepLearning perf metrics"
+  inSheet = "DeepLearning perf metrics",
+  pVal = 0.05
 )
 
 

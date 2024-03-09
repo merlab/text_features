@@ -3,8 +3,8 @@ library(readxl)
 library(ggpubr)
 library(ggsci)
 fPath <- "./mlModelMetrics_pathway.xlsx"
-fTxt <- "./mlModelMetrics.xlsx"
-pdf("./ML_results_path.pdf")
+fTxt <- "./result/Supplementary-data-2-performance-indexes.xlsx"
+pdf("./ML_results_path.pdf", height = 3, width = 5)
 sheets <- c("ElasticNet perf metrics-test", "RandomForest perf metrics-test")
 for (i in sheets) {
   path <- read_xlsx(fPath, sheet = i)[, c("drug", "pearsonCor", "feature selection method")]
@@ -22,6 +22,7 @@ for (i in sheets) {
       name = "Feature selection\nmethod"
     ) +
     ggtitle(i) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
     xlab("Drug") +
     ylab("Pearson correlation") +
     scale_y_continuous(expand = c(0, 0)) +
