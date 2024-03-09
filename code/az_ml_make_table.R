@@ -69,7 +69,7 @@ for (i in files) {
   v <- c()
 }
 coln <- c(
-  "drug", "geneFilterMethod",
+  "drug", "feature selection method",
   "pearsonCor",
   "spearmanCor",
   "kendallCor",
@@ -78,8 +78,10 @@ coln <- c(
   "MAE"
 )
 l <- list(
-  glmnet_train = table_glm_train, rf_train = table_rf_train,
-  glmnet_test = table_glm_test, rf_test = table_rf_test
+  "ElasticNet perf metrics-train" = table_glm_train,
+  "RandomForest perf metrics-train" = table_rf_train,
+  "ElasticNet perf metrics-test" = table_glm_test,
+  "RandomForest perf metrics-test" = table_rf_test
 )
 l <- lapply(l, function(x) {
   colnames(x) <- coln
@@ -90,6 +92,33 @@ l <- lapply(l, function(x) {
   return(x)
 })
 
+fs <- list.files("./data/other_ml_results_test/", pattern = "*.csv")
+for (i in fs) {
+  if (grepl("ElasticNet", i)) {
+    n <- "ElasticNet perf metrics-test"
+  } else {
+    n <- "RandomForest perf metrics-test"
+  }
+  geneFilterMethod <- strsplit(i, "_")[[1]][3]
+  geneFilterMethod <- gsub("Genetic", "GA", geneFilterMethod)
+  df <- l[[n]]
+  raw <- read.csv(sprintf("./data/other_ml_results_test/%s", i), header = TRUE)
+  drugs <- unique(unlist(strsplit(colnames(raw), "_")))
+  drugs <- drugs[!drugs %in% c("pred", "actual")]
+  for (j in drugs) {
+    cols <- grep(j, colnames(raw), value = TRUE)
+    obs <- as.vector(raw[, cols[1]])
+    pred <- as.vector(raw[, cols[2]])
+    out <- calculateMetrics(pred, obs)
+    dfIdx <- nrow(df) + 1
+    df[dfIdx, "drug"] <- drug
+    df[dfIdx, "feature selection method"] <- geneFilterMethod
+    df[dfIdx, names(out)] <- out
+  }
+  l[[n]] <- df
+}
+
+
 warm1Style <- createStyle(fontColour = "#FFFFFF", bgFill = "#FF0000")
 wb <- createWorkbook()
 for (i in names(l)) {
@@ -99,18 +128,3 @@ for (i in names(l)) {
 }
 saveWorkbook(wb, "./mlModelMetrics.xlsx", overwrite = TRUE)
 print("done")
-# rowL <- list()
-# rowL[[1]] <- which(x$geneFilterMethod == "text-mining" &
-#   x$distanceToTarget < -0.05 |
-#   x$distanceToTarget > 0.8) + 1
-# rowL[[2]] <- which(x$geneFilterMethod != "text-mining" &
-#   x$distanceToTarget > 0.05 |
-#   x$distanceToTarget < -0.8) + 1
-# rows <- unique(c(rowL[[1]], rowL[[2]]))
-# grid <- expand.grid(rows = rows, cols = seq_len(ncol(x)))
-# addStyle(wb,
-#   i,
-#   cols = grid$cols,
-#   rows = grid$rows,
-#   style = warm1Style,
-# )

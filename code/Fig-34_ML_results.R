@@ -23,7 +23,7 @@ raincloud_theme <- theme(
   legend.title = element_text(size = size),
   legend.text = element_text(size = size),
   legend.position = "right",
-  plot.title = element_text(lineheight = .8, face = "bold", size = 16),
+  plot.title = element_text(lineheight = .8, , size = 15), # face = "bold"
   panel.border = element_blank(),
   panel.grid.minor = element_blank(),
   panel.grid.major = element_blank(),
@@ -47,15 +47,6 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 
   dft$Type <- factor(dft$Type, levels = fetMeth)
 
-  # cl <- c("#B09C85FF", "#91D1C2FF", "#4DBBD5FF", "#3C5488FF", "#00A087FF", "#DC0000FF")
-  # cl <- c(
-  #   "#B09C85FF", "#91D1C2FF", "#4DBBD5FF", "#3C5488FF", "#00A087FF",
-  #   "#DC0000FF", "#173dd3", "#29df49", "#24dd9d"
-  # )
-  # cl <- c(
-  #   "#B09C85FF", "#91D1C2FF", "#4DBBD5FF", "#3C5488FF", "#00A087FF",
-  #   "#DC0000FF", "#85469d", "#bf4aa5", "#446e35"
-  # )
   cl <- c(
     "#B09C85FF", "#91D1C2FF", "#4DBBD5FF", "#3C5488FF", "#00A087FF",
     "#85469d", "#bf4aa5", "#446e35", "#DC0000FF"
@@ -98,12 +89,14 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
     # label.y = 0.7,
     size = 2.5
   )
-  g <- g + scale_y_continuous(breaks = seq(-0.4, 1, 0.2))
-  g + theme(
+  minVal <- round(floor(min(dft$value) / 2 * 10) / 5, 1)
+  maxVal <- (round(ceiling(max(dft$value) / 2 * 10) / 5, 1))
+  g <- g + scale_y_continuous(breaks = seq(minVal, maxVal, 0.2))
+  g <- g + theme(
     axis.text.x = element_text(
-      face = "bold", # color="#993333",
+      # face = "bold", # color="#993333",
       color = "black",
-      size = 8, angle = -0
+      size = 7.5, angle = -0
     ),
     axis.text.y = element_text(
       face = "bold", # color="#993333",
@@ -118,16 +111,17 @@ create_plot <- function(dft, title = NA, ylab = "Pearson correlation") {
 ## --------------------------------------------------------------
 ## ---- Random-forest training and test plot --------------------
 
-# f <- "./result/mlModelMetrics.xlsx"
+# f <- "./mlModelMetrics.xlsx"
 f <- "./result/Supplementary-data-2-performance-indexes.xlsx"
 formatXLSX <- function(x, valCol = "pearsonCor") {
   x <- x[, c("drug", "feature selection method", valCol)]
   colnames(x) <- c("drug", "Type", "value")
   return(x)
 }
-pdf("result/Fig-2_ML_results.pdf", width = 8.5, height = 13)
+h <- 3.5
+pdf("./result/ML_results.pdf", width = h * 1.4 * 2, height = h * 2)
 
-methods <- c("pearsonCor", "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE")
+methods <- c("pearsonCor") # , "spearmanCor", "kendallCor", "RMSE", "MSE", "MAE")
 ylabs <-
   c(
     "pearsonCor" = "Pearson correlation",
@@ -158,8 +152,9 @@ for (i in methods) {
   pltTSEN <- create_plot(tsEN, ylab = ylabs[i])
   ## ------------------------
   print(ggarrange(pltTRRF, pltTSRF, pltTREN, pltTSEN,
-    labels = c("train_RF", "test_RF", "train_EN", "test_EN"),
-    ncol = 1, nrow = 4
+    # labels = c("train_RF", "test_RF", "train_EN", "test_EN"),
+    labels = c("A", "B", "C", "D"),
+    ncol = 2, nrow = 2
   ))
 }
 dev.off()
@@ -167,7 +162,7 @@ dev.off()
 ## ---- Elastic-Net training and test plot --------------------
 ## ------------------------------------------------------------
 
-pdf("result/DNN_results.pdf", width = 8.3 * 1.5 / 2, height = 8.0 / 2)
+pdf("./result/DNN_results.pdf", width = h * 1.4 * 2, height = h * 2)
 for (i in methods) {
   print(i)
   dnn <- read_xlsx(f, sheet = "DeepLearning perf metrics")
@@ -176,34 +171,4 @@ for (i in methods) {
   plot(pltDNN)
 }
 dev.off()
-print("done")
-
-calcStats <- function(x) {
-  x <- tidyr::pivot_wider(x, names_from = "drug", values_from = "value")
-  x <- as.data.frame(x)
-  # rownames(x) <- x$drug
-  # x$drug <- NULL
-  rownames(x) <- x$Type
-  x$Type <- NULL
-  x <- data.matrix(x)
-  out <- data.frame(
-    drug = rownames(x),
-    mean = rowMeans(x),
-    median = apply(x, 1, median),
-    sd = apply(x, 1, sd),
-    se = apply(x, 1, sd) / sqrt(ncol(x)),
-    min = apply(x, 1, min),
-    max = apply(x, 1, max)
-  )
-}
-l <- list(
-  "RandomForest perf metrics-train" = trRF,
-  "RandomForest perf metrics-test" = tsRF,
-  "ElasticNet perf metrics-train" = trEN,
-  "ElasticNet perf metrics-test" = tsEN,
-  "DeepLearning perf metrics" = dnn
-)
-l <- lapply(l, calcStats)
-# write_xlsx(l, "./result/fig2-violin-stats.xlsx")
-
 print("done")
